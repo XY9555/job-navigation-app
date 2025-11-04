@@ -22,20 +22,47 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS配置
+// CORS配置 - 支持移动端APP
 app.use(cors({
-  origin: [
-    'http://localhost:8080', 
-    'http://localhost:3000',
-    'http://10.0.2.2:3000',  // Android模拟器
-    'http://192.168.112.212:3000',  // 你的电脑IP
-    'http://192.168.112.212:8080',  // 前端开发服务器
-    /^http:\/\/192\.168\.\d+\.\d+:3000$/,  // 局域网IP
-    /^http:\/\/192\.168\.\d+\.\d+:8080$/,  // 前端开发服务器
-    'capacitor://localhost',  // Capacitor应用
-    'ionic://localhost'       // Ionic应用
-  ],
-  credentials: true
+  origin: function (origin, callback) {
+    // 允许没有 origin 的请求（移动端APP）
+    if (!origin) return callback(null, true);
+    
+    // 允许的源列表
+    const allowedOrigins = [
+      'http://localhost:8080', 
+      'http://localhost:3000',
+      'http://10.0.2.2:3000',  // Android模拟器
+      'http://192.168.112.212:3000',  // 你的电脑IP
+      'http://192.168.112.212:8080',  // 前端开发服务器
+      'capacitor://localhost',  // Capacitor应用
+      'ionic://localhost',      // Ionic应用
+      'file://',               // 本地文件协议
+      'https://localhost',     // HTTPS本地
+      'http://localhost'       // HTTP本地
+    ];
+    
+    // 检查是否在允许列表中
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // 检查局域网IP模式
+    if (/^http:\/\/192\.168\.\d+\.\d+:(3000|8080)$/.test(origin)) {
+      return callback(null, true);
+    }
+    
+    // 检查是否是Capacitor应用（通常没有origin或特殊格式）
+    if (origin.startsWith('capacitor://') || origin.startsWith('ionic://')) {
+      return callback(null, true);
+    }
+    
+    // 允许所有移动端请求（临时调试）
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // 解析JSON

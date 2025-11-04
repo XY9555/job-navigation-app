@@ -21,26 +21,93 @@ class ApiService {
     const url = `${this.baseURL}${endpoint}`;
     const config = {
       headers: this.getAuthHeaders(),
+      timeout: this.timeout,
+      mode: 'cors', // 明确指定CORS模式
       ...options
     };
 
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json();
+    // 调试信息
+    console.log('🌐 API请求详情:', {
+      url,
+      method: config.method || 'GET',
+      headers: config.headers,
+      isCapacitor: !!window.Capacitor,
+      platform: window.Capacitor?.getPlatform?.() || 'web'
+    });
 
-      if (!response.ok) {
-        throw new Error(data.message || '请求失败');
+    try {
+      // 添加超时控制
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+      
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      console.log('📡 API响应状态:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
+      // 检查响应是否为JSON
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        // 尝试获取文本响应用于调试
+        const textResponse = await response.text();
+        console.error('非JSON响应:', textResponse);
+        data = { success: false, message: '服务器响应格式错误', response: textResponse };
       }
 
+      if (!response.ok) {
+        console.error('API请求失败:', {
+          status: response.status,
+          statusText: response.statusText,
+          data
+        });
+        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log('✅ API请求成功:', data);
       return data;
     } catch (error) {
-      console.error('API请求错误:', error);
+      console.error('❌ API请求错误详情:', {
+        url,
+        error: error.message,
+        name: error.name,
+        stack: error.stack,
+        isCapacitor: !!window.Capacitor,
+        networkState: navigator.onLine ? '在线' : '离线'
+      });
+      
+      // 处理不同类型的错误
+      if (error.name === 'AbortError') {
+        throw new Error('请求超时，请检查网络连接');
+      }
+      
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        throw new Error('网络连接失败，请检查网络设置和服务器状态');
+      }
+      
+      if (error.message.includes('CORS')) {
+        throw new Error('跨域请求被阻止，请联系技术支持');
+      }
       
       // 处理认证错误
-      if (error.message.includes('token') || error.message.includes('认证')) {
+      if (error.message.includes('token') || error.message.includes('认证') || error.message.includes('401')) {
         localStorage.removeItem('userToken');
         localStorage.removeItem('userInfo');
-        window.location.href = '/login';
+        // 在Capacitor环境中不要直接跳转
+        if (!window.Capacitor) {
+          window.location.href = '/login';
+        }
       }
       
       throw error;
