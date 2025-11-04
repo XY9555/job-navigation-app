@@ -6,10 +6,8 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
-// 数据库配置 - 支持云端和本地
-const { testConnection, syncDatabase } = process.env.NODE_ENV === 'production' 
-  ? require('./config/database-cloud')
-  : require('./config/database');
+// 数据库配置 - 统一使用本地配置（SQLite）
+const { testConnection, syncDatabase } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
