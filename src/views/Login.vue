@@ -55,6 +55,11 @@
           <router-link to="/register" class="link">注册账号</router-link>
           <router-link to="/forgot-password" class="link">忘记密码</router-link>
         </div>
+        
+        <!-- 网络诊断按钮 -->
+        <button class="diagnostic-btn" @click="runNetworkDiagnostic" type="button">
+          🔍 网络诊断
+        </button>
       </div>
     </div>
   </div>
@@ -105,20 +110,32 @@ export default {
         }
       } catch (error) {
         console.error('登录错误:', error)
-        // 如果API不可用，使用模拟登录
-        if (error.message.includes('fetch')) {
-          console.log('API不可用，使用模拟登录')
-          localStorage.setItem('userToken', 'mock-token-' + Date.now())
-          localStorage.setItem('userInfo', JSON.stringify({
-            phone: this.loginForm.phone || '13800138000',
-            name: this.loginForm.phone ? '用户' + this.loginForm.phone.slice(-4) : '游客用户'
-          }))
-          this.$router.replace('/home')
-        } else {
-          alert(error.message || '登录失败，请重试')
+        
+        // 显示详细错误信息
+        let errorMessage = '登录失败：' + error.message;
+        
+        // 如果是网络错误，提供更多信息
+        if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed to fetch')) {
+          errorMessage += '\n\n可能的原因：\n1. 网络连接问题\n2. 服务器暂时不可用\n3. 防火墙阻止连接\n\n请点击"网络诊断"按钮检查连接状态';
         }
+        
+        alert(errorMessage);
       } finally {
         this.loading = false
+      }
+    },
+    
+    async runNetworkDiagnostic() {
+      try {
+        const { NetworkDiagnostics } = await import('@/utils/network-diagnostics.js');
+        const { API_CONFIG } = await import('@/config/api-config.js');
+        
+        alert('开始网络诊断，请稍候...');
+        
+        const results = await NetworkDiagnostics.testConnection(API_CONFIG.BASE_URL);
+        await NetworkDiagnostics.displayResults(results);
+      } catch (error) {
+        alert('网络诊断失败：' + error.message);
       }
     }
   }
@@ -274,6 +291,23 @@ export default {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.diagnostic-btn {
+  width: 100%;
+  padding: 12px;
+  background: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.diagnostic-btn:hover {
+  background: #138496;
 }
 </style>
 

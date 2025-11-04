@@ -2,6 +2,9 @@
 echo 🔧 更新API地址配置
 echo.
 
+echo 🌐 你的GitHub仓库: https://github.com/XY9555/job-navigation-app
+echo 📡 预期的API地址格式: https://job-navigation-api.onrender.com
+echo.
 set /p API_URL="请输入你的Render API地址 (例如: https://job-navigation-api.onrender.com): "
 
 if "%API_URL%"=="" (

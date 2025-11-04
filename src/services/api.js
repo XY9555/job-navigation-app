@@ -10,10 +10,15 @@ class ApiService {
   // 获取认证头
   getAuthHeaders() {
     const token = localStorage.getItem('userToken');
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+    const headers = {
+      'Content-Type': 'application/json'
     };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
   }
 
   // 通用请求方法
@@ -41,7 +46,9 @@ class ApiService {
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
       
       const response = await fetch(url, {
-        ...config,
+        method: config.method || 'GET',
+        headers: config.headers,
+        body: config.body,
         signal: controller.signal
       });
       

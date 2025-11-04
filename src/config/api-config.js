@@ -28,36 +28,32 @@ const DEV_CONFIG = {
 };
 
 // 检测运行环境
-const isCapacitor = window.Capacitor !== undefined;
+const isCapacitor = typeof window !== 'undefined' && window.Capacitor !== undefined;
 const isAndroid = isCapacitor && window.Capacitor.getPlatform() === 'android';
 const isIOS = isCapacitor && window.Capacitor.getPlatform() === 'ios';
 const isWeb = !isCapacitor;
 
 // 获取API基础URL
 export const getApiBaseUrl = () => {
-  if (process.env.NODE_ENV === 'production') {
-    // 生产环境使用云端API地址
+  // 在Capacitor环境中，优先使用云端API
+  if (isCapacitor) {
+    // 移动端APP始终使用云端API
     return 'https://job-navigation-api.onrender.com/api';
   }
   
-  if (isAndroid) {
-    // Android真机或模拟器
-    return `http://${DEV_CONFIG.LOCAL_IP}:${DEV_CONFIG.PORT}/api`;
+  // 只有在Web开发环境中才使用本地API
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://job-navigation-api.onrender.com/api';
   }
   
-  if (isIOS) {
-    // iOS模拟器
-    return `http://localhost:${DEV_CONFIG.PORT}/api`;
-  }
-  
-  // Web浏览器开发
+  // Web浏览器开发环境
   return `http://localhost:${DEV_CONFIG.PORT}/api`;
 };
 
 // 导出配置
 export const API_CONFIG = {
   BASE_URL: getApiBaseUrl(),
-  TIMEOUT: 10000, // 10秒超时
+  TIMEOUT: 30000, // 30秒超时，给云端API更多时间
   RETRY_ATTEMPTS: 3
 };
 
@@ -69,6 +65,30 @@ console.log('- API地址:', API_CONFIG.BASE_URL);
 console.log('- 本地IP:', DEV_CONFIG.LOCAL_IP);
 console.log('- 端口:', DEV_CONFIG.PORT);
 
+// 网络连接测试函数
+export const testNetworkConnection = async () => {
+  const testUrl = `${API_CONFIG.BASE_URL}/health`;
+  console.log('🔍 测试网络连接:', testUrl);
+  
+  try {
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000
+    });
+    
+    const data = await response.json();
+    console.log('✅ 网络连接测试成功:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ 网络连接测试失败:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // 保存API配置到localStorage，方便调试
 if (typeof window !== 'undefined') {
   localStorage.setItem('apiBaseUrl', API_CONFIG.BASE_URL);
@@ -79,4 +99,17 @@ if (typeof window !== 'undefined') {
     localIP: DEV_CONFIG.LOCAL_IP,
     port: DEV_CONFIG.PORT
   }));
+  
+  // 自动测试网络连接（仅在 Capacitor 环境中）
+  if (isCapacitor) {
+    setTimeout(() => {
+      testNetworkConnection().then(result => {
+        if (result.success) {
+          console.log('🎉 移动端网络连接正常');
+        } else {
+          console.error('⚠️ 移动端网络连接异常:', result.error);
+        }
+      });
+    }, 2000);
+  }
 }
