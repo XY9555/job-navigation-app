@@ -82,13 +82,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 静态文件服务
 app.use('/uploads', express.static('uploads'));
 
-// 处理预检请求
-app.options('*', (req, res) => {
+// 处理预检请求 - 完全开放CORS
+app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(200);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma');
+  res.header('Access-Control-Allow-Credentials', 'false');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
 });
 
 // 健康检查端点

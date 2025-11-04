@@ -97,21 +97,20 @@ export default {
       
       try {
         // 调用真实API进行登录
-        const { authAPI } = await import('@/services/api.js')
-        const result = await authAPI.login({
-          phone: this.loginForm.phone,
-          password: this.loginForm.password
-        })
+        // 使用移动端专用API
+        const { MobileAPI } = await import('@/utils/mobile-request.js');
+        const result = await MobileAPI.login(this.loginForm.phone, this.loginForm.password);
         
-        if (result.success) {
+        if (result.ok && result.data.success) {
           // 保存登录状态
-          localStorage.setItem('userToken', result.data.token)
-          localStorage.setItem('userInfo', JSON.stringify(result.data.user))
+          localStorage.setItem('userToken', result.data.data.token)
+          localStorage.setItem('userInfo', JSON.stringify(result.data.data.user))
           
+          alert('登录成功！')
           // 跳转到首页
           this.$router.replace('/home')
         } else {
-          alert(result.message || '登录失败')
+          alert(result.data.message || '登录失败，请检查用户名和密码')
         }
       } catch (error) {
         console.error('登录错误:', error)
@@ -132,14 +131,19 @@ export default {
     
     async runNetworkDiagnostic() {
       try {
-        const { SimpleNetworkTest } = await import('@/utils/simple-network-test.js');
-        
         alert('开始网络诊断，请稍候...');
         
-        const results = await SimpleNetworkTest.testBasicConnection();
-        SimpleNetworkTest.displayResults(results);
+        // 使用移动端专用API测试连接
+        const { MobileAPI } = await import('@/utils/mobile-request.js');
+        const result = await MobileAPI.healthCheck();
+        
+        if (result.ok) {
+          alert('✅ 网络连接正常！\n服务器响应：' + JSON.stringify(result.data, null, 2));
+        } else {
+          alert('❌ 网络连接异常\n状态码：' + result.status + '\n响应：' + JSON.stringify(result.data, null, 2));
+        }
       } catch (error) {
-        alert('网络诊断失败：' + error.message);
+        alert('❌ 网络诊断失败：' + error.message + '\n\n请检查：\n1. 手机网络连接\n2. WiFi设置\n3. 防火墙设置');
       }
     },
     

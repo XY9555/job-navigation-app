@@ -156,8 +156,7 @@ export default {
     },
     
     async handleRegister() {
-      if (!this.registerForm.phone || !this.registerForm.code || 
-          !this.registerForm.password || !this.registerForm.confirmPassword) {
+      if (!this.registerForm.phone || !this.registerForm.password || !this.registerForm.confirmPassword) {
         alert('请填写完整信息')
         return
       }
@@ -180,13 +179,24 @@ export default {
       this.loading = true
       
       try {
-        // 模拟注册请求
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        // 使用移动端专用API
+        const { MobileAPI } = await import('@/utils/mobile-request.js');
+        const result = await MobileAPI.register({
+          username: '用户' + this.registerForm.phone.slice(-4),
+          phone: this.registerForm.phone,
+          password: this.registerForm.password,
+          email: this.registerForm.phone + '@example.com'
+        });
         
-        alert('注册成功')
-        this.$router.replace('/login')
+        if (result.ok && result.data.success) {
+          alert('注册成功！请使用手机号和密码登录')
+          this.$router.replace('/login')
+        } else {
+          alert(result.data.message || '注册失败，请重试')
+        }
       } catch (error) {
-        alert('注册失败，请重试')
+        console.error('注册错误:', error)
+        alert('网络连接失败，请检查网络设置')
       } finally {
         this.loading = false
       }
