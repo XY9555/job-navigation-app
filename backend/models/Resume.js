@@ -100,3 +100,5 @@ Resume.associate = function(models) {
 module.exports = Resume;
 
 
+
+

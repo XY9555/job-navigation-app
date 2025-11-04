@@ -84,6 +84,82 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// 创建测试用户端点（仅用于调试）
+app.post('/api/create-test-user', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const User = require('./models/User');
+    
+    // 检查用户是否已存在
+    const existingUser = await User.findOne({ 
+      where: { phone: '13800138000' } 
+    });
+
+    if (existingUser) {
+      // 更新密码
+      const hashedPassword = await bcrypt.hash('123456', 10);
+      await existingUser.update({ 
+        password: hashedPassword,
+        username: '测试用户'
+      });
+      
+      return res.json({
+        success: true,
+        message: '测试用户已更新',
+        user: {
+          id: existingUser.id,
+          username: '测试用户',
+          phone: '13800138000',
+          email: existingUser.email
+        },
+        loginInfo: {
+          phone: '13800138000',
+          password: '123456'
+        }
+      });
+    }
+
+    // 创建新用户
+    const hashedPassword = await bcrypt.hash('123456', 10);
+    
+    const testUser = await User.create({
+      username: '测试用户',
+      phone: '13800138000',
+      password: hashedPassword,
+      email: 'test@example.com',
+      avatar: null,
+      settings: JSON.stringify({
+        notifications: true,
+        theme: 'light',
+        language: 'zh-CN'
+      })
+    });
+
+    res.json({
+      success: true,
+      message: '测试用户创建成功',
+      user: {
+        id: testUser.id,
+        username: testUser.username,
+        phone: testUser.phone,
+        email: testUser.email
+      },
+      loginInfo: {
+        phone: '13800138000',
+        password: '123456'
+      }
+    });
+    
+  } catch (error) {
+    console.error('创建测试用户失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '创建测试用户失败',
+      error: error.message
+    });
+  }
+});
+
 // 初始化数据库
 async function initializeDatabase() {
   console.log('🔗 初始化SQLite数据库...');
