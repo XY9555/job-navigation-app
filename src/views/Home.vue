@@ -1,7 +1,6 @@
 <template>
   <div class="home-container">
-    <!-- 调试组件 -->
-    <AuthChecker />
+
     <!-- 顶部标题区域 -->
     <div class="header">
       <h1 class="app-title">求职导航服务</h1>
@@ -83,13 +82,8 @@
 </template>
 
 <script>
-import AuthChecker from '@/components/AuthChecker.vue';
-
 export default {
   name: 'Home',
-  components: {
-    AuthChecker
-  },
   methods: {
     navigateTo(path) {
       this.$router.push(path)
@@ -126,7 +120,7 @@ export default {
 }
 
 .main-card {
-  margin: 0 16px;
+  margin: 0 20px;
   background: white;
   border-radius: 24px;
   padding: 32px 24px;
@@ -137,13 +131,13 @@ export default {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 16px;
-  height: 400px;
+  gap: 14px;
+  height: 440px;
 }
 
 .feature-item {
   border-radius: 16px;
-  padding: 24px 16px;
+  padding: 28px 14px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -175,18 +169,18 @@ export default {
 }
 
 .feature-icon {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
+  font-size: 42px;
 }
 
-
 .feature-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   margin: 0;
+  line-height: 1.3;
 }
 
 

@@ -36,9 +36,8 @@ pids
 # Coverage directory used by tools like istanbul
 coverage/
 
-# Capacitor
-android/app/src/main/assets/public/
-ios/App/public/
+# Web build output
+dist/
 
 # Temporary files
 *.tmp

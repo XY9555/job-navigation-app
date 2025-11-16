@@ -70,6 +70,20 @@ class FileParser {
           textContent = this.createFallbackContent(originalName, 'Word');
           parseMethod = 'fallback-no-lib';
         }
+      } else if (mimeType === 'text/plain') {
+        console.log('📝 识别为文本文件');
+        // 尝试不同的编码方式
+        try {
+          textContent = fileBuffer.toString('utf8');
+          // 如果包含乱码，尝试其他编码
+          if (textContent.includes('�')) {
+            textContent = fileBuffer.toString('gbk');
+          }
+        } catch (error) {
+          textContent = fileBuffer.toString('utf8');
+        }
+        parseMethod = 'text-plain';
+        console.log('✅ 文本文件解析成功，提取文本长度:', textContent.length);
       } else {
         console.warn('❌ 不支持的文件格式:', mimeType);
         throw new Error(`不支持的文件格式: ${mimeType}`);

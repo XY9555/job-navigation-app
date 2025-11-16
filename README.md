@@ -14,7 +14,7 @@
 
 ### 前端
 - Vue.js 3
-- Capacitor (跨平台移动开发)
+- Vite (现代化构建工具)
 - Vite (构建工具)
 
 ### 后端
@@ -25,44 +25,25 @@
 ### AI服务
 - 智谱AI (GLM-4)
 
-## 部署
+## 快速开始
 
-### 开发环境
 ```bash
 # 安装依赖
 npm install
 cd backend && npm install
 
 # 启动后端
-cd backend && npm run dev
+cd backend && node server.js
 
-# 启动前端
+# 启动前端（新终端）
 npm run dev
-
-# 构建Android应用
-npm run build
-npx cap sync android
-npx cap open android
 ```
 
-### 生产环境
-```bash
-# 构建生产版本
-npm run build
+访问 http://localhost:8080
 
-# 部署到云端
-# 详见 CLOUD_DEPLOYMENT_GUIDE.md
-```
-
-## 环境变量
-
-### 后端 (.env)
-```
-NODE_ENV=production
-DATABASE_URL=postgresql://...
-ZHIPU_API_KEY=your_api_key
-PORT=10000
-```
+## 测试账号
+- 手机号：13800138000
+- 密码：123456
 
 ## 许可证
 

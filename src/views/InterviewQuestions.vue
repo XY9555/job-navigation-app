@@ -170,12 +170,10 @@ export default {
         const response = await resumeAPI.getResumes()
         
         if (response.success) {
-          // 过滤掉评测结果和匹配分析记录，只显示普通简历
+          // 显示所有简历记录，不再过滤
           const allResumes = response.data || []
-          this.resumeList = allResumes.filter(resume => {
-            return !resume.evaluation && !resume.jobMatching
-          })
-          console.log('📋 面试问题页面加载简历列表:', allResumes.length, '总记录,', this.resumeList.length, '份普通简历')
+          this.resumeList = allResumes
+          console.log('📋 面试问题页面加载简历列表:', allResumes.length, '总记录')
         } else {
           console.error('❌ 加载简历列表失败:', response.message)
           this.resumeList = []

@@ -20,6 +20,8 @@ import Feedback from '@/views/Feedback.vue'
 import AboutUs from '@/views/AboutUs.vue'
 import AccountSecurity from '@/views/AccountSecurity.vue'
 import UserSettings from '@/views/UserSettings.vue'
+import ChangePassword from '@/views/ChangePassword.vue'
+import BindEmail from '@/views/BindEmail.vue'
 
 const routes = [
   {
@@ -139,6 +141,18 @@ const routes = [
     name: 'UserSettings',
     component: UserSettings,
     meta: { title: '个人设置' }
+  },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: ChangePassword,
+    meta: { title: '修改密码' }
+  },
+  {
+    path: '/bind-email',
+    name: 'BindEmail',
+    component: BindEmail,
+    meta: { title: '邮箱绑定' }
   }
 ]
 

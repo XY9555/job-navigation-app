@@ -24,7 +24,7 @@
           <div class="item-icon">📱</div>
           <div class="item-content">
             <div class="item-title">手机绑定</div>
-            <div class="item-desc">已绑定：138****8888</div>
+            <div class="item-desc">已绑定：{{ maskPhone(userInfo?.phone) }}</div>
           </div>
           <div class="item-arrow">›</div>
         </div>
@@ -33,7 +33,7 @@
           <div class="item-icon">✉️</div>
           <div class="item-content">
             <div class="item-title">邮箱绑定</div>
-            <div class="item-desc">未绑定</div>
+            <div class="item-desc">{{ userInfo?.email || '未绑定' }}</div>
           </div>
           <div class="item-arrow">›</div>
         </div>
@@ -53,25 +53,40 @@
 export default {
   name: 'AccountSecurity',
   data() {
-    return {}
+    return {
+      userInfo: null
+    }
+  },
+  mounted() {
+    this.loadUserInfo()
   },
   methods: {
     goBack() {
       this.$router.go(-1)
     },
+    loadUserInfo() {
+      const userInfoStr = localStorage.getItem('userInfo')
+      if (userInfoStr) {
+        this.userInfo = JSON.parse(userInfoStr)
+      }
+    },
     changePassword() {
-      alert('跳转到修改密码页面')
+      this.$router.push('/change-password')
     },
     bindPhone() {
-      alert('跳转到手机绑定页面')
+      alert('手机号已在注册时绑定，暂不支持修改')
     },
     bindEmail() {
-      alert('跳转到邮箱绑定页面')
+      this.$router.push('/bind-email')
     },
     deleteAccount() {
       if (confirm('确定要注销账户吗？此操作不可恢复！')) {
         alert('账户注销功能暂未开放')
       }
+    },
+    maskPhone(phone) {
+      if (!phone) return '未绑定'
+      return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
     }
   }
 }

@@ -27,26 +27,12 @@ const DEV_CONFIG = {
   PORT: 3000
 };
 
-// 检测运行环境
-const isCapacitor = typeof window !== 'undefined' && window.Capacitor !== undefined;
-const isAndroid = isCapacitor && window.Capacitor.getPlatform() === 'android';
-const isIOS = isCapacitor && window.Capacitor.getPlatform() === 'ios';
-const isWeb = !isCapacitor;
+// Web浏览器环境
+const isWeb = true;
 
 // 获取API基础URL
 export const getApiBaseUrl = () => {
-  // 在Capacitor环境中，优先使用云端API
-  if (isCapacitor) {
-    // 移动端APP始终使用云端API
-    return 'https://job-navigation-api.onrender.com/api';
-  }
-  
-  // 只有在Web开发环境中才使用本地API
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://job-navigation-api.onrender.com/api';
-  }
-  
-  // Web浏览器开发环境
+  // 浏览器环境始终使用本地API
   return `http://localhost:${DEV_CONFIG.PORT}/api`;
 };
 
@@ -88,7 +74,7 @@ export const API_CONFIG = {
 // 调试信息
 console.log('🔧 API配置信息:');
 console.log('- 运行环境:', process.env.NODE_ENV);
-console.log('- 平台:', isCapacitor ? window.Capacitor.getPlatform() : 'web');
+console.log('- 平台:', 'web');
 console.log('- API地址:', API_CONFIG.BASE_URL);
 console.log('- 本地IP:', DEV_CONFIG.LOCAL_IP);
 console.log('- 端口:', DEV_CONFIG.PORT);
@@ -122,7 +108,7 @@ if (typeof window !== 'undefined') {
   localStorage.setItem('apiBaseUrl', API_CONFIG.BASE_URL);
   localStorage.setItem('apiConfig', JSON.stringify({
     baseUrl: API_CONFIG.BASE_URL,
-    platform: isCapacitor ? window.Capacitor.getPlatform() : 'web',
+    platform: 'web',
     environment: process.env.NODE_ENV,
     localIP: DEV_CONFIG.LOCAL_IP,
     port: DEV_CONFIG.PORT

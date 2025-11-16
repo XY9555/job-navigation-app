@@ -50,7 +50,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M9 11H3m6 0a3 3 0 106 0m-6 0a3 3 0 016 0M9 7h.01M9 15h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2"/>
           </svg>
-          评分理由
+          匹配度分析
         </div>
         <div class="reason-list">
           <div v-for="reason in analysisData.reasons" :key="reason.id" class="reason-item">
@@ -95,6 +95,46 @@
         </div>
       </div>
 
+      <!-- 匹配优势 -->
+      <div class="strengths-card" v-if="analysisData.strengths && analysisData.strengths.length > 0">
+        <div class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          匹配优势
+        </div>
+        <div class="strength-list">
+          <div v-for="(strength, index) in analysisData.strengths" :key="index" class="strength-item">
+            <div class="strength-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="strength-text">{{ strength }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 不足之处 -->
+      <div class="gaps-card" v-if="analysisData.gaps && analysisData.gaps.length > 0">
+        <div class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          不足之处
+        </div>
+        <div class="gap-list">
+          <div v-for="(gap, index) in analysisData.gaps" :key="index" class="gap-item">
+            <div class="gap-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="gap-text">{{ gap }}</div>
+          </div>
+        </div>
+      </div>
+
       <!-- 关注方向 -->
       <div class="focus-card">
         <div class="card-title">
@@ -107,6 +147,21 @@
         <div class="focus-tags">
           <div v-for="focus in analysisData.focusAreas" :key="focus" class="focus-tag">
             {{ focus }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 关键词匹配 -->
+      <div class="keywords-card" v-if="analysisData.keywordMatches && analysisData.keywordMatches.length > 0">
+        <div class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          关键词匹配
+        </div>
+        <div class="keyword-tags">
+          <div v-for="keyword in analysisData.keywordMatches" :key="keyword" class="keyword-tag">
+            {{ keyword }}
           </div>
         </div>
       </div>
@@ -132,65 +187,20 @@ export default {
     return {
       saving: false,
       analysisData: {
-        matchingScore: 85,
+        matchingScore: 75,
         jobInfo: {
-          title: '前端开发工程师',
-          description: '负责公司前端产品的开发和维护，使用Vue.js、React等技术栈...'
+          title: '职位匹配分析',
+          description: '正在加载分析数据...'
         },
         resumeData: {
-          name: '张三'
+          name: '加载中...'
         },
-        reasons: [
-          {
-            id: 1,
-            type: 'positive',
-            title: '技术栈匹配度高',
-            description: '您的Vue.js和JavaScript技能与职位要求高度匹配',
-            score: 25
-          },
-          {
-            id: 2,
-            type: 'positive',
-            title: '项目经验丰富',
-            description: '您有3年相关项目开发经验，符合职位要求',
-            score: 20
-          },
-          {
-            id: 3,
-            type: 'neutral',
-            title: '学历背景适合',
-            description: '本科学历满足基本要求，但非计算机专业稍有劣势',
-            score: 15
-          },
-          {
-            id: 4,
-            type: 'negative',
-            title: '缺少移动端经验',
-            description: '职位要求有React Native经验，您的简历中未体现',
-            score: -5
-          }
-        ],
-        suggestions: [
-          {
-            id: 1,
-            priority: 'high',
-            title: '补充移动端开发技能',
-            description: '建议学习React Native或Flutter，增加移动端开发经验'
-          },
-          {
-            id: 2,
-            priority: 'medium',
-            title: '完善项目描述',
-            description: '在简历中详细描述项目中使用的技术栈和解决的问题'
-          },
-          {
-            id: 3,
-            priority: 'low',
-            title: '获得相关认证',
-            description: '考虑获得前端相关的技术认证，提升专业度'
-          }
-        ],
-        focusAreas: ['移动端开发', 'TypeScript', '性能优化', '团队协作', '项目管理']
+        reasons: [],
+        suggestions: [],
+        focusAreas: [],
+        strengths: [],
+        gaps: [],
+        keywordMatches: []
       }
     }
   },
@@ -199,13 +209,93 @@ export default {
     // 从localStorage获取分析数据
     const savedData = localStorage.getItem('matchingAnalysisData')
     if (savedData) {
-      const data = JSON.parse(savedData)
-      this.analysisData.matchingScore = data.matchingScore
-      this.analysisData.jobInfo = data.jobInfo
-      this.analysisData.resumeData = data.resumeData
-      
-      // 根据匹配度生成动态的评分理由
-      this.generateDynamicReasons(data.matchingScore, data.jobInfo)
+      try {
+        const data = JSON.parse(savedData)
+        console.log('📊 加载匹配分析数据:', data)
+        console.log('🔍 原始数据字段检查:', {
+          hasReasons: !!data.reasons,
+          reasonsType: Array.isArray(data.reasons) ? 'array' : typeof data.reasons,
+          reasonsLength: data.reasons?.length || 0,
+          hasSuggestions: !!data.suggestions,
+          suggestionsType: Array.isArray(data.suggestions) ? 'array' : typeof data.suggestions,
+          suggestionsLength: data.suggestions?.length || 0,
+          hasStrengths: !!data.strengths,
+          strengthsLength: data.strengths?.length || 0,
+          hasGaps: !!data.gaps,
+          gapsLength: data.gaps?.length || 0
+        })
+        
+        // 使用真实的AI分析结果
+        this.analysisData = {
+          matchingScore: data.matchingScore || 75,
+          jobInfo: data.jobInfo || {
+            title: '未知职位',
+            description: '暂无职位描述'
+          },
+          resumeData: data.resumeData || {
+            name: '未知候选人'
+          },
+          analysisMode: data.analysisMode,
+          sourceInfo: data.sourceInfo,
+          // 优先使用AI返回的详细分析结果，只有在完全缺失时才使用默认数据
+          reasons: data.reasons || this.getDefaultReasons(),
+          suggestions: data.suggestions || this.getDefaultSuggestions(),
+          focusAreas: data.focusAreas || this.getDefaultFocusAreas(),
+          strengths: data.strengths || [],
+          gaps: data.gaps || [],
+          keywordMatches: data.keywordMatches || [],
+          timestamp: data.timestamp
+        }
+        
+        // 检查是否使用了默认数据
+        const isUsingDefaultReasons = this.isDefaultReasons(this.analysisData.reasons)
+        const isUsingDefaultSuggestions = this.isDefaultSuggestions(this.analysisData.suggestions)
+        
+        console.log('✅ 分析数据加载完成:', {
+          score: this.analysisData.matchingScore,
+          reasonsCount: this.analysisData.reasons?.length || 0,
+          suggestionsCount: this.analysisData.suggestions?.length || 0,
+          focusAreasCount: this.analysisData.focusAreas?.length || 0,
+          strengthsCount: this.analysisData.strengths?.length || 0,
+          gapsCount: this.analysisData.gaps?.length || 0,
+          keywordMatchesCount: this.analysisData.keywordMatches?.length || 0,
+          reasonsSource: isUsingDefaultReasons ? '❌ 使用默认数据' : '✅ AI生成数据',
+          suggestionsSource: isUsingDefaultSuggestions ? '❌ 使用默认数据' : '✅ AI生成数据',
+          dataQuality: (!isUsingDefaultReasons && !isUsingDefaultSuggestions) ? '✅ 高质量AI数据' : '⚠️ 包含默认数据'
+        })
+        
+        // 详细检查AI数据的内容
+        if (data.reasons && Array.isArray(data.reasons) && data.reasons.length > 0 && !isUsingDefaultReasons) {
+          console.log('📋 AI生成的评分理由:', data.reasons.map(r => `[${r.type}] ${r.title} (${r.score}分)`))
+        }
+        if (data.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0 && !isUsingDefaultSuggestions) {
+          console.log('💡 AI生成的改进建议:', data.suggestions.map(s => `[${s.priority}] ${s.title}`))
+        }
+        if (data.focusAreas && Array.isArray(data.focusAreas) && data.focusAreas.length > 0) {
+          console.log('🎯 AI生成的关注方向:', data.focusAreas)
+        }
+        if (data.strengths && Array.isArray(data.strengths) && data.strengths.length > 0) {
+          console.log('💪 AI生成的匹配优势:', data.strengths)
+        }
+        if (data.gaps && Array.isArray(data.gaps) && data.gaps.length > 0) {
+          console.log('⚠️ AI生成的能力差距:', data.gaps)
+        }
+        
+        // 如果检测到默认数据，给出警告和建议
+        if (isUsingDefaultReasons || isUsingDefaultSuggestions) {
+          console.warn('⚠️ 检测到默认数据，可能的原因：')
+          console.warn('1. AI服务调用失败或超时')
+          console.warn('2. 数据传递过程中丢失')
+          console.warn('3. localStorage中的数据不完整')
+          console.warn('建议：重新进行职位匹配分析')
+        }
+      } catch (error) {
+        console.error('❌ 解析分析数据失败:', error)
+        this.loadDefaultData()
+      }
+    } else {
+      console.warn('⚠️ 未找到匹配分析数据，加载默认数据')
+      this.loadDefaultData()
     }
   },
   
@@ -237,51 +327,68 @@ export default {
       return priorityMap[priority] || '一般'
     },
     
-    generateDynamicReasons(score, jobInfo) {
-      // 根据职位信息和分数动态生成评分理由
-      const reasons = []
-      
-      if (jobInfo.title.includes('前端') || jobInfo.title.includes('Vue') || jobInfo.title.includes('React')) {
-        reasons.push({
+    // 检测是否是默认的评分理由
+    isDefaultReasons(reasons) {
+      if (!reasons || !Array.isArray(reasons) || reasons.length === 0) return true
+      if (reasons.length === 1 && reasons[0].title && reasons[0].title.includes('数据不完整')) return true
+      return false
+    },
+    
+    // 检测是否是默认的改进建议
+    isDefaultSuggestions(suggestions) {
+      if (!suggestions || !Array.isArray(suggestions) || suggestions.length === 0) return true
+      if (suggestions.length === 1 && suggestions[0].title && suggestions[0].title.includes('重新进行分析')) return true
+      return false
+    },
+    
+    // 加载默认数据
+    loadDefaultData() {
+      this.analysisData = {
+        matchingScore: 75,
+        jobInfo: {
+          title: '职位匹配分析',
+          description: '未找到分析数据，请重新进行分析'
+        },
+        resumeData: {
+          name: '候选人'
+        },
+        reasons: this.getDefaultReasons(),
+        suggestions: this.getDefaultSuggestions(),
+        focusAreas: this.getDefaultFocusAreas(),
+        strengths: ['基础信息完整'],
+        gaps: ['缺少详细分析数据'],
+        keywordMatches: []
+      }
+    },
+
+    // 获取默认评分理由
+    getDefaultReasons() {
+      return [
+        {
           id: 1,
-          type: 'positive',
-          title: '技术栈匹配度高',
-          description: `您的前端开发技能与"${jobInfo.title}"职位要求高度匹配`,
-          score: 25
-        })
-      }
-      
-      if (score >= 80) {
-        reasons.push({
-          id: 2,
-          type: 'positive',
-          title: '综合能力突出',
-          description: '您的技能组合和项目经验很好地满足了职位需求',
-          score: 20
-        })
-      }
-      
-      if (jobInfo.description.includes('经验') || jobInfo.description.includes('年')) {
-        reasons.push({
-          id: 3,
-          type: score >= 75 ? 'positive' : 'neutral',
-          title: '工作经验',
-          description: score >= 75 ? '您的工作经验符合职位要求' : '工作经验基本符合要求，但还有提升空间',
-          score: score >= 75 ? 15 : 10
-        })
-      }
-      
-      if (score < 85) {
-        reasons.push({
-          id: 4,
-          type: 'negative',
-          title: '部分技能待提升',
-          description: '在某些专业技能方面还需要进一步学习和实践',
-          score: -10
-        })
-      }
-      
-      this.analysisData.reasons = reasons
+          type: 'neutral',
+          title: '数据不完整',
+          description: '未找到详细的分析数据，建议重新进行职位匹配分析',
+          score: 0
+        }
+      ]
+    },
+
+    // 获取默认改进建议
+    getDefaultSuggestions() {
+      return [
+        {
+          id: 1,
+          priority: 'high',
+          title: '重新进行分析',
+          description: '请返回职位匹配分析页面，重新进行详细的匹配分析'
+        }
+      ]
+    },
+
+    // 获取默认关注方向
+    getDefaultFocusAreas() {
+      return ['重新分析', '数据完善']
     },
     
     reAnalyze() {
@@ -508,7 +615,10 @@ export default {
 .job-info-card,
 .analysis-card,
 .suggestions-card,
-.focus-card {
+.strengths-card,
+.gaps-card,
+.focus-card,
+.keywords-card {
   background: white;
   border-radius: 16px;
   padding: 20px;
@@ -670,6 +780,80 @@ export default {
   line-height: 1.4;
 }
 
+/* 匹配优势 */
+.strength-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.strength-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border-left: 4px solid #10b981;
+}
+
+.strength-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #10b981;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.strength-text {
+  flex: 1;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+/* 不足之处 */
+.gap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gap-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #fef3c7;
+  border-radius: 8px;
+  border-left: 4px solid #f59e0b;
+}
+
+.gap-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.gap-text {
+  flex: 1;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+}
+
 /* 关注方向 */
 .focus-tags {
   display: flex;
@@ -684,6 +868,24 @@ export default {
   color: #1565c0;
   border-radius: 20px;
   font-size: 13px;
+  font-weight: 500;
+}
+
+/* 关键词匹配 */
+.keyword-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-left: 28px;
+}
+
+.keyword-tag {
+  padding: 6px 10px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+  font-size: 12px;
   font-weight: 500;
 }
 

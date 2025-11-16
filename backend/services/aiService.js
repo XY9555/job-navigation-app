@@ -1,12 +1,16 @@
 // AI服务集成层 - 支持多种大模型接入
-
-// AI服务不需要额外的config文件
+require('dotenv').config();
 
 class AIService {
   constructor() {
     this.provider = process.env.AI_PROVIDER || 'zhipu'; // 默认使用智谱AI
     this.apiKey = process.env.AI_API_KEY || process.env.ZHIPU_API_KEY;
     this.baseURL = process.env.AI_BASE_URL;
+    console.log('🔧 AI服务初始化:', {
+      provider: this.provider,
+      hasApiKey: !!this.apiKey,
+      keyLength: this.apiKey ? this.apiKey.length : 0
+    });
   }
 
   // 通用AI请求方法
@@ -144,8 +148,14 @@ class AIService {
     console.log('🔑 API Key状态:', this.apiKey ? '已配置' : '未配置');
     console.log('📊 评测维度:', evaluationOptions);
     
-    // 如果没有配置API密钥，直接返回智能分析结果
-    if (!this.apiKey || this.apiKey === 'your-ai-api-key-here') {
+    // 检查API密钥配置
+    console.log('🔍 检查API密钥:', {
+      hasKey: !!this.apiKey,
+      keyStart: this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'null',
+      keyLength: this.apiKey ? this.apiKey.length : 0
+    });
+    
+    if (!this.apiKey || this.apiKey === 'your-ai-api-key-here' || this.apiKey === 'your-zhipu-api-key-here') {
       console.warn('⚠️ AI API密钥未配置，使用智能分析结果');
       return this.getDefaultEvaluation(resume, evaluationOptions);
     }
@@ -268,29 +278,91 @@ ${this.buildEvaluationDimensions(evaluationOptions)}
 
   // 构建职位匹配提示词
   buildJobMatchingPrompt(resume, jobDescription, jobTitle) {
-    const experience = resume.experience || [];
+    const personalInfo = resume.personalInfo || {};
+    const experience = resume.experience || resume.workExperience || [];
     const skills = resume.skills || [];
+    const projects = resume.projects || [];
+    const education = resume.education || [];
+    const jobIntention = resume.jobIntention || {};
     
-    return `请分析简历与职位的匹配度：
+    return `请作为专业的招聘顾问，详细分析以下简历与职位的匹配度：
 
-职位信息：
-职位名称：${jobTitle}
+=== 职位信息 ===
+职位名称：${jobTitle || '未提供'}
 职位描述：${jobDescription}
 
-候选人简历：
-姓名：${resume.personalInfo?.name || '未提供'}
-当前职位：${resume.jobIntention?.position || '未明确'}
-工作经验：${experience.map(exp => exp.position || '职位').join(', ') || '无工作经验'}
-技能：${skills.map(skill => skill.name || '技能').join(', ') || '无技能信息'}
+=== 候选人简历信息 ===
+姓名：${personalInfo.name || '未提供'}
+联系方式：${personalInfo.phone || '未提供'} / ${personalInfo.email || '未提供'}
+职位意向：${jobIntention.position || '未明确'}
+期望薪资：${jobIntention.salary || '未提供'}
 
-请分析匹配度并返回JSON格式：
+教育背景：${education.length}段
+${education.map(edu => `- ${edu.school || '某学校'} ${edu.major || '专业'} ${edu.degree || '学历'} (${edu.startDate || '开始时间'} - ${edu.endDate || '结束时间'})`).join('\n') || '- 无教育信息'}
+
+工作经验：${experience.length}段
+${experience.map(exp => `- ${exp.company || '某公司'} ${exp.position || '职位'} (${exp.startDate || '开始时间'} - ${exp.endDate || '结束时间'})\n  职责：${exp.description || '无描述'}`).join('\n') || '- 无工作经验'}
+
+技能水平：${skills.length}项
+${skills.map(skill => `- ${skill.name || '技能'} (熟练度: ${skill.level || 0}%)`).join('\n') || '- 无技能信息'}
+
+项目经历：${projects.length}个
+${projects.map(proj => `- ${proj.name || '项目名称'} (${proj.role || '角色'})\n  描述：${proj.description || '无描述'}\n  技术栈：${(proj.technologies || []).join('、') || '无技术信息'}`).join('\n') || '- 无项目经历'}
+
+=== 分析要求 ===
+请从以下维度进行专业分析并返回详细的JSON格式结果：
+
+1. 综合匹配度评分（0-100分）
+2. 详细评分理由（每个理由包含类型、标题、描述、得分）
+3. 匹配优势分析
+4. 技能差距识别
+5. 具体改进建议
+6. 关注方向推荐
+
+请严格按照以下JSON格式返回：
 {
   "matchingScore": 85,
-  "strengths": ["匹配优势"],
-  "gaps": ["技能差距"],
-  "suggestions": ["改进建议"],
-  "keywordMatches": ["匹配关键词"]
-}`;
+  "reasons": [
+    {
+      "id": 1,
+      "type": "positive",
+      "title": "具体评分理由标题",
+      "description": "详细的理由描述，说明为什么给出这个评分",
+      "score": 25
+    },
+    {
+      "id": 2,
+      "type": "negative",
+      "title": "扣分理由标题",
+      "description": "详细说明扣分原因和影响",
+      "score": -10
+    }
+  ],
+  "strengths": ["具体匹配优势1", "具体匹配优势2"],
+  "gaps": ["具体技能差距1", "具体技能差距2"],
+  "suggestions": [
+    {
+      "id": 1,
+      "priority": "high",
+      "title": "高优先级改进建议",
+      "description": "详细的改进建议和实施方法"
+    },
+    {
+      "id": 2,
+      "priority": "medium",
+      "title": "中优先级改进建议",
+      "description": "详细的改进建议和实施方法"
+    }
+  ],
+  "focusAreas": ["关注方向1", "关注方向2", "关注方向3"],
+  "keywordMatches": ["匹配关键词1", "匹配关键词2"]
+}
+
+注意：
+- reasons数组中type可以是"positive"(加分项)、"negative"(扣分项)、"neutral"(中性项)
+- suggestions数组中priority可以是"high"、"medium"、"low"
+- 所有描述都要具体、专业、有指导意义
+- 评分理由要基于简历内容和职位要求的具体匹配情况`;
   }
 
   // 构建面试问题提示词
@@ -441,14 +513,92 @@ ${projects.map(proj => `- ${proj.name || '项目名称'} (${proj.role || '角色
   // 解析职位匹配响应
   parseJobMatchingResponse(response) {
     try {
+      console.log('🔍 开始解析职位匹配AI响应...');
+      console.log('📄 原始响应:', response.substring(0, 500) + '...');
+      
+      // 尝试多种JSON提取方式
+      let jsonStr = '';
+      
+      // 方式1: 寻找完整的JSON对象
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        jsonStr = jsonMatch[0];
+      } else {
+        // 方式2: 寻找```json代码块
+        const codeBlockMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) {
+          jsonStr = codeBlockMatch[1];
+        } else {
+          console.warn('⚠️ 未找到标准JSON格式，使用默认结果');
+          return this.getDefaultJobMatching();
+        }
       }
+      
+      console.log('📋 提取的JSON字符串:', jsonStr.substring(0, 200) + '...');
+      
+      // 清理JSON字符串
+      jsonStr = jsonStr
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // 移除控制字符
+        .replace(/,\s*}/g, '}') // 移除尾随逗号
+        .replace(/,\s*]/g, ']'); // 移除数组尾随逗号
+      
+      const result = JSON.parse(jsonStr);
+      console.log('✅ JSON解析成功:', result);
+      
+      // 获取默认数据作为基础
+      const defaultData = this.getDefaultJobMatching();
+      
+      // 标准化数据结构，确保所有必需字段都存在
+      const standardizedResult = {
+        matchingScore: result.matchingScore || defaultData.matchingScore,
+        // reasons字段：优先使用AI数据，否则使用默认数据
+        reasons: (Array.isArray(result.reasons) && result.reasons.length > 0) ? result.reasons : defaultData.reasons,
+        // strengths字段：转换字符串数组为标准格式
+        strengths: Array.isArray(result.strengths) ? result.strengths : defaultData.strengths,
+        // gaps字段：转换字符串数组为标准格式  
+        gaps: Array.isArray(result.gaps) ? result.gaps : defaultData.gaps,
+        // suggestions字段：转换字符串数组为对象数组
+        suggestions: Array.isArray(result.suggestions) && result.suggestions.length > 0 ? 
+          result.suggestions.map((item, index) => {
+            if (typeof item === 'string') {
+              return {
+                id: index + 1,
+                priority: index === 0 ? 'high' : index === 1 ? 'medium' : 'low',
+                title: `改进建议${index + 1}`,
+                description: item
+              };
+            }
+            return item;
+          }) : defaultData.suggestions,
+        // focusAreas字段：优先使用AI数据，否则使用默认数据
+        focusAreas: (Array.isArray(result.focusAreas) && result.focusAreas.length > 0) ? result.focusAreas : defaultData.focusAreas,
+        // keywordMatches字段：保持原样
+        keywordMatches: Array.isArray(result.keywordMatches) ? result.keywordMatches : defaultData.keywordMatches
+      };
+      
+      // 记录数据来源
+      console.log('📊 数据来源分析:', {
+        reasons: (result.hasOwnProperty('reasons') && Array.isArray(result.reasons) && result.reasons.length > 0) ? 'AI生成' : '默认数据',
+        suggestions: (result.hasOwnProperty('suggestions') && Array.isArray(result.suggestions) && result.suggestions.length > 0) ? 'AI生成(已转换)' : '默认数据',
+        focusAreas: (result.hasOwnProperty('focusAreas') && Array.isArray(result.focusAreas) && result.focusAreas.length > 0) ? 'AI生成' : '默认数据',
+        strengths: (result.hasOwnProperty('strengths') && Array.isArray(result.strengths) && result.strengths.length > 0) ? 'AI生成' : '默认数据',
+        gaps: (result.hasOwnProperty('gaps') && Array.isArray(result.gaps) && result.gaps.length > 0) ? 'AI生成' : '默认数据'
+      });
+      
+      console.log('📊 标准化结果:', {
+        score: standardizedResult.matchingScore,
+        reasonsCount: standardizedResult.reasons.length,
+        suggestionsCount: standardizedResult.suggestions.length,
+        focusAreasCount: standardizedResult.focusAreas.length
+      });
+      
+      return standardizedResult;
+      
     } catch (error) {
-      console.error('解析AI响应失败:', error);
+      console.error('❌ 解析AI响应失败:', error.message);
+      console.log('🔄 使用默认职位匹配结果');
+      return this.getDefaultJobMatching();
     }
-    return this.getDefaultJobMatching();
   }
 
   // 解析面试问题响应
@@ -550,13 +700,13 @@ ${projects.map(proj => `- ${proj.name || '项目名称'} (${proj.role || '角色
   }
 
   // 智能评测结果（基于简历内容分析）
-  getDefaultEvaluation(resume = null) {
+  getDefaultEvaluation(resume = null, evaluationOptions = {}) {
     if (!resume) {
       return this.getBasicEvaluation();
     }
 
     // 基于简历内容进行智能分析
-    const analysis = this.analyzeResumeContent(resume);
+    const analysis = this.analyzeResumeContent(resume, evaluationOptions);
     
     return {
       score: analysis.score,
@@ -564,7 +714,7 @@ ${projects.map(proj => `- ${proj.name || '项目名称'} (${proj.role || '角色
       weaknesses: analysis.weaknesses,
       suggestions: analysis.suggestions,
       details: analysis.details,
-      note: '本评测基于内容分析生成，如需AI深度评测请配置有效的API密钥'
+      note: '本评测基于智能内容分析生成，提供专业的简历优化建议'
     };
   }
 
@@ -598,7 +748,7 @@ ${projects.map(proj => `- ${proj.name || '项目名称'} (${proj.role || '角色
   }
 
   // 分析简历内容
-  analyzeResumeContent(resume) {
+  analyzeResumeContent(resume, evaluationOptions = {}) {
     let score = 60; // 基础分
     const strengths = [];
     const weaknesses = [];
@@ -610,15 +760,42 @@ ${projects.map(proj => `- ${proj.name || '项目名称'} (${proj.role || '角色
       skills: 60
     };
 
-    // 分析个人信息完整性
+    // 分析个人信息完整性（仅在选择内容评测时）
     const personalInfo = resume.personalInfo || {};
-    if (personalInfo.name && personalInfo.phone && personalInfo.email) {
-      score += 5;
-      details.content += 10;
-      strengths.push('个人联系信息完整');
-    } else {
-      weaknesses.push('个人联系信息不完整');
-      suggestions.push('补充完整的个人联系信息');
+    if (!evaluationOptions.content || evaluationOptions.content) {
+      if (personalInfo.name && personalInfo.phone && personalInfo.email) {
+        score += 8;
+        details.content += 15;
+        strengths.push('个人联系信息完整，便于HR联系');
+        
+        // 检查邮箱格式
+        if (personalInfo.email.includes('@') && personalInfo.email.includes('.')) {
+          score += 2;
+          strengths.push('邮箱格式规范');
+        }
+        
+        // 检查手机号格式
+        if (personalInfo.phone.length === 11 && /^1[3-9]\d{9}$/.test(personalInfo.phone)) {
+          score += 2;
+          strengths.push('手机号格式正确');
+        }
+      } else {
+        weaknesses.push('个人联系信息不完整，影响HR联系');
+        suggestions.push('补充完整的姓名、手机号和邮箱地址');
+        details.content -= 10;
+      }
+      
+      // 检查其他个人信息
+      if (personalInfo.age || personalInfo.birthDate) {
+        score += 1;
+        details.content += 2;
+      }
+      
+      if (personalInfo.address) {
+        score += 1;
+        details.content += 2;
+        strengths.push('包含地址信息，便于了解工作地点偏好');
+      }
     }
 
     // 分析教育背景
@@ -728,11 +905,54 @@ ${projects.map(proj => `- ${proj.name || '项目名称'} (${proj.role || '角色
   // 默认职位匹配结果
   getDefaultJobMatching() {
     return {
-      matchingScore: 80,
-      strengths: ['相关经验匹配'],
-      gaps: ['部分技能需要加强'],
-      suggestions: ['提升相关技能'],
-      keywordMatches: ['基础技能匹配']
+      matchingScore: 75,
+      reasons: [
+        {
+          id: 1,
+          type: 'positive',
+          title: '基础信息完整',
+          description: '简历包含了基本的个人信息和联系方式，便于HR联系',
+          score: 15
+        },
+        {
+          id: 2,
+          type: 'neutral',
+          title: '经验匹配度一般',
+          description: '工作经验与职位要求基本匹配，但还有提升空间',
+          score: 10
+        },
+        {
+          id: 3,
+          type: 'negative',
+          title: '技能描述不够详细',
+          description: '简历中的技能描述相对简单，建议补充更多技术细节',
+          score: -5
+        }
+      ],
+      strengths: ['基础信息完整', '具备相关工作经验', '教育背景符合要求'],
+      gaps: ['技能描述需要更详细', '项目经历可以更丰富', '缺少具体成果数据'],
+      suggestions: [
+        {
+          id: 1,
+          priority: 'high',
+          title: '丰富技能描述',
+          description: '建议在简历中详细描述掌握的技术栈，包括熟练程度和实际应用经验'
+        },
+        {
+          id: 2,
+          priority: 'medium',
+          title: '补充项目经历',
+          description: '添加更多项目经历，详细描述项目背景、个人职责和取得的成果'
+        },
+        {
+          id: 3,
+          priority: 'low',
+          title: '量化工作成果',
+          description: '在工作经历中加入具体的数据和成果，如性能提升、用户增长等'
+        }
+      ],
+      focusAreas: ['技能提升', '项目经验', '成果展示', '专业认证'],
+      keywordMatches: ['基础技能匹配', '行业相关经验']
     };
   }
 

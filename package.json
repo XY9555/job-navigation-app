@@ -1,38 +1,28 @@
 {
-  "name": "job-navigation-app",
+  "name": "job-navigation-web",
   "version": "1.0.0",
-  "description": "求职导航APP - Vue前端项目",
+  "description": "求职导航 - Web应用",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "android": "npm run build && npx cap sync android && npx cap open android"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@capacitor/android": "^5.2.3",
-    "@capacitor/app": "^5.0.6",
-    "@capacitor/core": "^5.2.3",
-    "@capacitor/haptics": "^5.0.6",
-    "@capacitor/keyboard": "^5.0.6",
-    "@capacitor/status-bar": "^5.0.6",
     "axios": "^1.4.0",
     "vant": "^4.6.2",
     "vue": "^3.3.4",
     "vue-router": "^4.2.4"
   },
   "devDependencies": {
-    "@capacitor/cli": "^5.2.3",
     "@vitejs/plugin-vue": "^4.2.3",
-    "typescript": "^5.9.3",
     "vite": "^4.4.5"
   },
   "keywords": [
     "vue",
-    "mobile",
     "job",
     "navigation",
-    "android"
+    "web"
   ],
   "author": "Job Navigation Team",
   "license": "MIT"

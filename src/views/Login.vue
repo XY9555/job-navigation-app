@@ -56,15 +56,7 @@
           <router-link to="/forgot-password" class="link">忘记密码</router-link>
         </div>
         
-        <!-- 网络诊断按钮 -->
-        <button class="diagnostic-btn" @click="runNetworkDiagnostic" type="button">
-          🔍 网络诊断
-        </button>
-        
-        <!-- 离线模式按钮 -->
-        <button class="offline-btn" @click="enableOfflineMode" type="button">
-          🔄 启用离线模式
-        </button>
+
       </div>
     </div>
   </div>
@@ -96,87 +88,31 @@ export default {
       this.loading = true
       
       try {
-        // 调用真实API进行登录
-        // 使用移动端专用API
-        const { MobileAPI } = await import('@/utils/mobile-request.js');
-        const result = await MobileAPI.login(this.loginForm.phone, this.loginForm.password);
+        // 调用API进行登录
+        const { authAPI } = await import('@/services/api.js');
+        const result = await authAPI.login(this.loginForm);
         
-        if (result.ok && result.data.success) {
+        if (result.success) {
           // 保存登录状态
-          localStorage.setItem('userToken', result.data.data.token)
-          localStorage.setItem('userInfo', JSON.stringify(result.data.data.user))
+          const token = result.data.token;
+          const user = result.data.user;
           
-          alert('登录成功！')
+          localStorage.setItem('userToken', token);
+          localStorage.setItem('userInfo', JSON.stringify(user));
+          
           // 跳转到首页
-          this.$router.replace('/home')
+          this.$router.replace('/home');
         } else {
-          alert(result.data.message || '登录失败，请检查用户名和密码')
+          alert(result.message || '登录失败，请检查用户名和密码');
         }
       } catch (error) {
         console.error('登录错误:', error)
-        
-        // 显示详细错误信息
-        let errorMessage = '登录失败：' + error.message;
-        
-        // 如果是网络错误，提供更多信息
-        if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed to fetch')) {
-          errorMessage += '\n\n可能的原因：\n1. 网络连接问题\n2. 服务器暂时不可用\n3. 防火墙阻止连接\n\n请点击"网络诊断"按钮检查连接状态';
-        }
-        
-        alert(errorMessage);
+        alert('登录失败：' + error.message);
       } finally {
         this.loading = false
       }
     },
-    
-    async runNetworkDiagnostic() {
-      try {
-        alert('开始网络诊断，请稍候...');
-        
-        // 使用移动端专用API测试连接
-        const { MobileAPI } = await import('@/utils/mobile-request.js');
-        const result = await MobileAPI.healthCheck();
-        
-        if (result.ok) {
-          alert('✅ 网络连接正常！\n服务器响应：' + JSON.stringify(result.data, null, 2));
-        } else {
-          alert('❌ 网络连接异常\n状态码：' + result.status + '\n响应：' + JSON.stringify(result.data, null, 2));
-        }
-      } catch (error) {
-        alert('❌ 网络诊断失败：' + error.message + '\n\n请检查：\n1. 手机网络连接\n2. WiFi设置\n3. 防火墙设置');
-      }
-    },
-    
-    async enableOfflineMode() {
-      try {
-        const { OfflineMode } = await import('@/utils/offline-mode.js');
-        
-        if (confirm('启用离线模式？\n\n离线模式下：\n✅ 可以正常使用基本功能\n❌ AI功能将不可用\n\n确定启用吗？')) {
-          OfflineMode.enable();
-          OfflineMode.showOfflineNotice();
-          
-          // 尝试离线登录
-          if (this.loginForm.phone && this.loginForm.password) {
-            try {
-              const result = OfflineMode.mockLogin(this.loginForm.phone, this.loginForm.password);
-              
-              // 保存登录状态
-              localStorage.setItem('userToken', result.data.token);
-              localStorage.setItem('userInfo', JSON.stringify(result.data.user));
-              
-              alert('离线模式登录成功！');
-              this.$router.replace('/home');
-            } catch (error) {
-              alert('离线登录失败：' + error.message);
-            }
-          } else {
-            alert('离线模式已启用，请输入手机号和密码进行离线登录');
-          }
-        }
-      } catch (error) {
-        alert('启用离线模式失败：' + error.message);
-      }
-    }
+
   }
 }
 </script>
@@ -332,38 +268,6 @@ export default {
   100% { transform: rotate(360deg); }
 }
 
-.diagnostic-btn {
-  width: 100%;
-  padding: 12px;
-  background: #17a2b8;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  margin-top: 16px;
-  transition: background-color 0.3s ease;
-}
 
-.diagnostic-btn:hover {
-  background: #138496;
-}
-
-.offline-btn {
-  width: 100%;
-  padding: 12px;
-  background: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  margin-top: 8px;
-  transition: background-color 0.3s ease;
-}
-
-.offline-btn:hover {
-  background: #5a6268;
-}
 </style>
 

@@ -97,13 +97,51 @@ class DocumentService {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: this.getScoreDescription(evaluationData.score),
+                  text: this.getMatchingDescription(analysisData.matchingScore),
                   italic: true,
                   color: "595959"
                 })
               ],
               spacing: { after: 300 }
             }),
+            
+            // 评分理由详情
+            ...(analysisData.reasons && analysisData.reasons.length > 0 ? [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: "📋 评分理由",
+                    bold: true,
+                    size: 18,
+                    color: "5B2C6F"
+                  })
+                ],
+                spacing: { before: 200, after: 150 }
+              }),
+              ...analysisData.reasons.map(reason => {
+                const typeColor = reason.type === 'positive' ? "70AD47" : 
+                                 reason.type === 'negative' ? "C5504B" : "FFC000";
+                const typeSymbol = reason.type === 'positive' ? "✓" : 
+                                  reason.type === 'negative' ? "✗" : "◆";
+                
+                return [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: `${typeSymbol} `, color: typeColor, bold: true, size: 16 }),
+                      new TextRun({ text: reason.title, bold: true }),
+                      new TextRun({ text: ` (${reason.score > 0 ? '+' : ''}${reason.score}分)`, color: typeColor })
+                    ],
+                    spacing: { after: 50 }
+                  }),
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: `   ${reason.description}`, color: "595959" })
+                    ],
+                    spacing: { after: 150 }
+                  })
+                ];
+              }).flat()
+            ] : []),
             
             // 优势分析
             ...(evaluationData.strengths && evaluationData.strengths.length > 0 ? [
@@ -318,6 +356,55 @@ class DocumentService {
               spacing: { after: 200 }
             }),
             
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: this.getMatchingDescription(analysisData.matchingScore),
+                  italic: true,
+                  color: "595959"
+                })
+              ],
+              spacing: { after: 300 }
+            }),
+            
+            // 评分理由详情
+            ...(analysisData.reasons && analysisData.reasons.length > 0 ? [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: "📋 评分理由",
+                    bold: true,
+                    size: 18,
+                    color: "5B2C6F"
+                  })
+                ],
+                spacing: { before: 200, after: 150 }
+              }),
+              ...analysisData.reasons.map(reason => {
+                const typeColor = reason.type === 'positive' ? "70AD47" : 
+                                 reason.type === 'negative' ? "C5504B" : "FFC000";
+                const typeSymbol = reason.type === 'positive' ? "✓" : 
+                                  reason.type === 'negative' ? "✗" : "◆";
+                
+                return [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: `${typeSymbol} `, color: typeColor, bold: true, size: 16 }),
+                      new TextRun({ text: reason.title, bold: true }),
+                      new TextRun({ text: ` (${reason.score > 0 ? '+' : ''}${reason.score}分)`, color: typeColor })
+                    ],
+                    spacing: { after: 50 }
+                  }),
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: `   ${reason.description}`, color: "595959" })
+                    ],
+                    spacing: { after: 150 }
+                  })
+                ];
+              }).flat()
+            ] : []),
+            
             // 职位描述
             ...(analysisData.jobInfo?.description ? [
               new Paragraph({
@@ -400,15 +487,42 @@ class DocumentService {
                 ],
                 spacing: { before: 300, after: 150 }
               }),
-              ...analysisData.suggestions.map((suggestion, index) => 
-                new Paragraph({
+              ...analysisData.suggestions.map((suggestion, index) => {
+                // 处理对象格式的建议
+                const suggestionText = typeof suggestion === 'object' 
+                  ? `【${this.getPriorityText(suggestion.priority)}】${suggestion.title}：${suggestion.description}`
+                  : suggestion;
+                
+                return new Paragraph({
                   children: [
                     new TextRun({ text: `${index + 1}. `, bold: true, color: "2E74B5" }),
-                    new TextRun({ text: suggestion })
+                    new TextRun({ text: suggestionText })
                   ],
                   spacing: { after: 100 }
-                })
-              )
+                });
+              })
+            ] : []),
+            
+            // 关注方向
+            ...(analysisData.focusAreas && analysisData.focusAreas.length > 0 ? [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: "🎯 关注方向",
+                    bold: true,
+                    size: 18,
+                    color: "5B2C6F"
+                  })
+                ],
+                spacing: { before: 400, after: 150 }
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({ text: "建议重点关注：", bold: true }),
+                  new TextRun({ text: analysisData.focusAreas.join('、') })
+                ],
+                spacing: { after: 200 }
+              })
             ] : []),
             
             // 关键词匹配
@@ -422,7 +536,7 @@ class DocumentService {
                     color: "5B2C6F"
                   })
                 ],
-                spacing: { before: 400, after: 150 }
+                spacing: { before: 200, after: 150 }
               }),
               new Paragraph({
                 children: [
@@ -490,6 +604,15 @@ class DocumentService {
     return '您的简历需要全面优化，建议从结构、内容、格式等多方面进行改进。';
   }
   
+  // 获取匹配度描述
+  static getMatchingDescription(score) {
+    if (score >= 90) return '您与该职位高度匹配，建议积极投递简历！';
+    if (score >= 80) return '您与该职位匹配度良好，具备较强的竞争力。';
+    if (score >= 70) return '您与该职位基本匹配，建议针对性地提升相关技能。';
+    if (score >= 60) return '您与该职位存在一定差距，需要重点提升核心能力。';
+    return '您与该职位匹配度较低，建议考虑其他更适合的职位或进行系统性学习。';
+  }
+  
   // 获取详细评分项目名称
   static getDetailName(key) {
     const nameMap = {
@@ -501,6 +624,16 @@ class DocumentService {
       projects: '项目经历'
     };
     return nameMap[key] || key;
+  }
+  
+  // 获取优先级文本
+  static getPriorityText(priority) {
+    const priorityMap = {
+      high: '高优先级',
+      medium: '中优先级',
+      low: '低优先级'
+    };
+    return priorityMap[priority] || '普通';
   }
 }
 

@@ -422,11 +422,75 @@ export default {
   opacity: 0.9;
 }
 
-.analysis-section, .suggestions-section, .details-section {
+.analysis-section, .suggestions-section, .details-section, .strengths-section, .weaknesses-section {
   background: white;
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
+}
+
+/* 优势部分样式 */
+.strengths-section {
+  background: white;
+}
+
+.strength-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.strength-item:last-child {
+  margin-bottom: 0;
+}
+
+.strength-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.strength-text {
+  flex: 1;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+/* 不足部分样式 */
+.weaknesses-section {
+  background: white;
+}
+
+.weakness-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.weakness-item:last-child {
+  margin-bottom: 0;
+}
+
+.weakness-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.weakness-text {
+  flex: 1;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
 }
 
 .section-title {
@@ -485,22 +549,35 @@ export default {
   color: #666;
 }
 
+/* 建议部分样式 */
+.suggestions-section {
+  background: white;
+}
+
 .suggestion-item {
   display: flex;
   align-items: flex-start;
-  padding: 12px 0;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.suggestion-item:last-child {
+  margin-bottom: 0;
 }
 
 .suggestion-icon {
   font-size: 20px;
-  margin-right: 12px;
+  flex-shrink: 0;
   margin-top: 2px;
 }
 
 .suggestion-text {
   flex: 1;
   font-size: 14px;
-  color: #333;
+  color: #374151;
   line-height: 1.5;
 }
 

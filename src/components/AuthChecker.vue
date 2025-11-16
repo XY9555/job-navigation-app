@@ -95,7 +95,7 @@ export default {
         hasUserInfo: !!userInfo,
         apiUrl: apiConfig.baseUrl || 'unknown',
         isOnline: navigator.onLine,
-        platform: window.Capacitor ? window.Capacitor.getPlatform() : 'web'
+        platform: 'web'
       };
       
       AndroidDebugger.log('认证状态更新', this.authStatus);

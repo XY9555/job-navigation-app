@@ -297,8 +297,13 @@ export default {
     // 总是加载简历数据，不管是否登录
     await this.loadResumes()
     
-    // 恢复页面状态
-    this.restorePageState()
+    // 清除旧的页面状态，确保每次都是干净的开始
+    this.clearPageState()
+    
+    // 重置评测模式
+    this.evaluationMode = ''
+    this.selectedResume = ''
+    this.uploadedFile = null
   },
   
   beforeUnmount() {
@@ -348,50 +353,88 @@ export default {
       try {
         this.loadingResumes = true
         
-        // 检查是否有认证token
-        const token = localStorage.getItem('userToken')
+        // 确保有有效token
+        await this.ensureAuthenticated()
         
-        if (token) {
-          // 如果有token，尝试从API获取数据
-          try {
-            const { resumeAPI } = await import('@/services/api')
-            const response = await resumeAPI.getResumes()
-            
-            if (response.success && response.data) {
-              // 过滤掉评测结果和匹配分析记录，只显示普通简历
-              const allResumes = response.data
-              this.resumeList = allResumes.filter(resume => {
-                return !resume.evaluation && !resume.jobMatching
-              })
-              console.log('成功加载简历列表:', allResumes.length, '总记录,', this.resumeList.length, '份普通简历')
-              return
-            }
-          } catch (apiError) {
-            console.error('API调用失败:', apiError)
+        console.log('📡 开始加载简历列表...')
+        
+        const token = localStorage.getItem('userToken')
+        const response = await fetch('http://localhost:3000/api/resumes', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
         
-        // 如果没有token或API调用失败，显示空列表
-        console.log('无法加载简历数据，显示空列表')
-        this.resumeList = []
+        const data = await response.json()
+        console.log('📝 API响应:', data)
+        
+        if (data.success) {
+          // 显示所有简历记录，不再过滤
+          const allResumes = data.data || []
+          this.resumeList = allResumes
+          
+          console.log('✅ 简历列表加载成功:', allResumes.length, '总记录')
+        } else {
+          throw new Error(data.message || '加载简历列表失败')
+        }
         
       } catch (error) {
-        console.error('加载简历列表失败:', error)
-        // 显示空列表
+        console.error('❌ 加载简历列表失败:', error)
         this.resumeList = []
       } finally {
         this.loadingResumes = false
       }
     },
     
+    // 确保已认证
+    async ensureAuthenticated() {
+      let token = localStorage.getItem('userToken')
+      
+      // 如果没有token，执行一次性登录
+      if (!token) {
+        console.log('🔄 首次访问，执行登录...')
+        
+        const response = await fetch('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: '13800138000', password: '123456' })
+        })
+        
+        const data = await response.json()
+        
+        if (data.success && data.data && data.data.token) {
+          localStorage.setItem('userToken', data.data.token)
+          localStorage.setItem('userInfo', JSON.stringify(data.data.user))
+          console.log('✅ 登录成功，token已永久保存')
+        } else {
+          throw new Error('登录失败: ' + (data.message || '未知错误'))
+        }
+      } else {
+        console.log('✅ 使用已保存的永久token')
+      }
+    },
+    
     selectResume(resumeId) {
-      // 切换到选择简历模式
-      this.evaluationMode = 'select';
-      this.selectedResume = resumeId;
-      // 清空上传相关数据
-      this.uploadedFile = null;
-      this.parsedContent = null;
-      console.log('🎯 切换到选择简历模式，简历ID:', resumeId);
+      if (resumeId === '' || !resumeId) {
+        // 如果选择了空值，重置状态
+        this.evaluationMode = '';
+        this.selectedResume = '';
+        console.log('🔄 重置选择状态');
+      } else {
+        // 切换到选择简历模式
+        this.evaluationMode = 'select';
+        this.selectedResume = resumeId;
+        // 清空上传相关数据
+        this.uploadedFile = null;
+        this.parsedContent = null;
+        console.log('🎯 切换到选择简历模式，简历ID:', resumeId);
+      }
     },
     
     triggerUpload() {

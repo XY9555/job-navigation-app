@@ -107,17 +107,29 @@ export default {
         return
       }
       
-      // 开始倒计时
-      this.codeCountdown = 60
-      const timer = setInterval(() => {
-        this.codeCountdown--
-        if (this.codeCountdown <= 0) {
-          clearInterval(timer)
+      try {
+        // 调用后端API发送验证码
+        const { authAPI } = await import('@/services/api.js');
+        const result = await authAPI.sendCode(this.resetForm.phone);
+        
+        if (result.success) {
+          alert('验证码已发送到您的手机（测试环境固定为：123456）')
+          
+          // 开始倒计时
+          this.codeCountdown = 60
+          const timer = setInterval(() => {
+            this.codeCountdown--
+            if (this.codeCountdown <= 0) {
+              clearInterval(timer)
+            }
+          }, 1000)
+        } else {
+          alert(result.message || '发送失败，请重试')
         }
-      }, 1000)
-      
-      // 模拟发送验证码
-      alert('验证码已发送')
+      } catch (error) {
+        console.error('发送验证码失败:', error)
+        alert('发送失败：' + error.message)
+      }
     },
     
     async handleReset() {
@@ -139,13 +151,23 @@ export default {
       this.loading = true
       
       try {
-        // 模拟重置密码请求
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        // 调用后端API重置密码
+        const { authAPI } = await import('@/services/api.js');
+        const result = await authAPI.resetPassword({
+          phone: this.resetForm.phone,
+          code: this.resetForm.code,
+          newPassword: this.resetForm.newPassword
+        });
         
-        alert('密码重置成功')
-        this.$router.replace('/login')
+        if (result.success) {
+          alert('密码重置成功！请使用新密码登录')
+          this.$router.replace('/login')
+        } else {
+          alert(result.message || '重置失败，请重试')
+        }
       } catch (error) {
-        alert('重置失败，请重试')
+        console.error('重置密码失败:', error)
+        alert('重置失败：' + error.message)
       } finally {
         this.loading = false
       }

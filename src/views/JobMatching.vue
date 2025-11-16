@@ -282,7 +282,13 @@ export default {
   },
   
   async mounted() {
+    // 总是加载简历数据，不管是否登录
     await this.loadResumes()
+    
+    // 重置分析模式
+    this.evaluationMode = ''
+    this.selectedResume = ''
+    this.uploadedFile = null
   },
   
   methods: {
@@ -294,38 +300,70 @@ export default {
       try {
         this.loadingResumes = true
         
-        // 检查是否有认证token
-        const token = localStorage.getItem('userToken')
+        // 确保有有效token
+        await this.ensureAuthenticated()
         
-        if (token) {
-          // 如果有token，尝试从API获取数据
-          try {
-            const { resumeAPI } = await import('@/services/api')
-            const response = await resumeAPI.getResumes()
-            
-            if (response.success && response.data) {
-              // 过滤掉评测结果和匹配分析记录，只显示普通简历
-              const allResumes = response.data
-              this.resumeList = allResumes.filter(resume => {
-                return !resume.evaluation && !resume.jobMatching
-              })
-              console.log('成功加载简历列表:', allResumes.length, '总记录,', this.resumeList.length, '份普通简历')
-              return
-            }
-          } catch (apiError) {
-            console.error('API调用失败:', apiError)
+        console.log('📡 开始加载简历列表...')
+        
+        const token = localStorage.getItem('userToken')
+        const response = await fetch('http://localhost:3000/api/resumes', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
         
-        // 如果没有token或API调用失败，显示空列表
-        console.log('无法加载简历数据，显示空列表')
-        this.resumeList = []
+        const data = await response.json()
+        console.log('📝 API响应:', data)
+        
+        if (data.success) {
+          // 显示所有简历记录，不再过滤
+          const allResumes = data.data || []
+          this.resumeList = allResumes
+          
+          console.log('✅ 简历列表加载成功:', allResumes.length, '总记录')
+        } else {
+          throw new Error(data.message || '加载简历列表失败')
+        }
         
       } catch (error) {
-        console.error('加载简历列表失败:', error)
+        console.error('❌ 加载简历列表失败:', error)
         this.resumeList = []
       } finally {
         this.loadingResumes = false
+      }
+    },
+    
+    // 确保已认证
+    async ensureAuthenticated() {
+      let token = localStorage.getItem('userToken')
+      
+      // 如果没有token，执行一次性登录
+      if (!token) {
+        console.log('🔄 首次访问，执行登录...')
+        
+        const response = await fetch('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: '13800138000', password: '123456' })
+        })
+        
+        const data = await response.json()
+        
+        if (data.success && data.data && data.data.token) {
+          localStorage.setItem('userToken', data.data.token)
+          localStorage.setItem('userInfo', JSON.stringify(data.data.user))
+          console.log('✅ 登录成功，token已永久保存')
+        } else {
+          throw new Error('登录失败: ' + (data.message || '未知错误'))
+        }
+      } else {
+        console.log('✅ 使用已保存的永久token')
       }
     },
     
@@ -571,11 +609,137 @@ export default {
       // 去重关键词匹配
       const uniqueKeywords = [...new Set(keywordMatches)];
       
+      // 生成详细的评分理由
+      const reasons = [];
+      let reasonId = 1;
+      
+      // 技能匹配评分理由
+      if (skillMatches > 0) {
+        reasons.push({
+          id: reasonId++,
+          type: 'positive',
+          title: '技能匹配度高',
+          description: `您掌握的${skillMatches}项技能与职位要求高度匹配，包括：${keywordMatches.slice(0, 3).join('、')}等`,
+          score: skillMatches * 5
+        });
+      } else {
+        reasons.push({
+          id: reasonId++,
+          type: 'negative',
+          title: '技能匹配度不足',
+          description: '简历中的技能与职位要求匹配度较低，建议补充相关技术技能',
+          score: -10
+        });
+      }
+      
+      // 工作经验评分理由
+      if (experience.length > 0) {
+        const hasRelevantExp = experience.some(exp => {
+          const position = exp.position?.toLowerCase() || '';
+          return jobTitleLower.includes(position);
+        });
+        
+        if (hasRelevantExp) {
+          reasons.push({
+            id: reasonId++,
+            type: 'positive',
+            title: '工作经验相关性强',
+            description: `您的${experience.length}段工作经验与目标职位高度相关，具备实际工作基础`,
+            score: 20
+          });
+        } else {
+          reasons.push({
+            id: reasonId++,
+            type: 'neutral',
+            title: '工作经验基本符合',
+            description: `您有${experience.length}段工作经验，虽然与目标职位不完全匹配，但具备一定工作基础`,
+            score: 10
+          });
+        }
+      } else {
+        reasons.push({
+          id: reasonId++,
+          type: 'negative',
+          title: '缺少工作经验',
+          description: '简历中缺少相关工作经验，这可能影响职位申请的竞争力',
+          score: -15
+        });
+      }
+      
+      // 项目经验评分理由
+      if (projects.length > 0) {
+        reasons.push({
+          id: reasonId++,
+          type: 'positive',
+          title: '项目经验丰富',
+          description: `您参与了${projects.length}个项目，展现了实际的项目开发和团队协作能力`,
+          score: 15
+        });
+      } else {
+        reasons.push({
+          id: reasonId++,
+          type: 'neutral',
+          title: '项目经验待补充',
+          description: '建议在简历中添加项目经历，以更好地展示实际开发能力',
+          score: 0
+        });
+      }
+      
+      // 生成结构化的改进建议
+      const structuredSuggestions = [];
+      let suggestionId = 1;
+      
+      if (skillMatches === 0) {
+        structuredSuggestions.push({
+          id: suggestionId++,
+          priority: 'high',
+          title: '学习职位相关技能',
+          description: '根据职位描述，重点学习和掌握相关的技术栈和工具，提升技能匹配度'
+        });
+      }
+      
+      if (experience.length === 0) {
+        structuredSuggestions.push({
+          id: suggestionId++,
+          priority: 'high',
+          title: '积累相关工作经验',
+          description: '通过实习、兼职或志愿项目等方式积累相关工作经验，增强简历竞争力'
+        });
+      }
+      
+      if (projects.length === 0) {
+        structuredSuggestions.push({
+          id: suggestionId++,
+          priority: 'medium',
+          title: '开发个人项目',
+          description: '创建和完成一些个人项目，展示实际的开发能力和技术应用水平'
+        });
+      }
+      
+      // 如果没有高优先级建议，添加通用建议
+      if (structuredSuggestions.length === 0) {
+        structuredSuggestions.push({
+          id: suggestionId++,
+          priority: 'medium',
+          title: '持续优化简历',
+          description: '定期更新简历内容，突出与目标职位最相关的经验和技能'
+        });
+      }
+      
+      // 生成关注方向
+      const focusAreas = [];
+      if (skillMatches < 3) focusAreas.push('技能提升');
+      if (experience.length < 2) focusAreas.push('经验积累');
+      if (projects.length < 2) focusAreas.push('项目实践');
+      focusAreas.push('行业认知', '职业规划');
+      
       return {
         matchingScore,
+        reasons,
         strengths,
         gaps,
-        suggestions,
+        suggestions: structuredSuggestions,
+        focusAreas,
         keywordMatches: uniqueKeywords,
         analysis: {
           skillsMatch: skillMatches,
@@ -669,6 +833,23 @@ export default {
         return
       }
       
+      // 验证职位描述长度
+      if (this.jobInfo.description.trim().length < 10) {
+        alert('职位描述至少需要10个字符')
+        return
+      }
+      
+      if (this.jobInfo.description.trim().length > 5000) {
+        alert('职位描述不能超过5000个字符')
+        return
+      }
+      
+      // 验证职位标题长度
+      if (this.jobInfo.title.trim().length > 100) {
+        alert('职位标题不能超过100个字符')
+        return
+      }
+      
       if (this.evaluationMode === 'select' && !this.selectedResume) {
         alert('请选择一个简历进行分析')
         return
@@ -679,21 +860,79 @@ export default {
         return
       }
       
+      // 确保认证状态
+      await this.ensureAuthenticated()
+      
       this.loading = true
       
       try {
-        const { aiAPI } = await import('@/services/api')
         let result;
         let resumeData;
         
         if (this.evaluationMode === 'select') {
           // 分析已选择的简历
           console.log('🎯 开始分析选中简历，ID:', this.selectedResume)
-          result = await aiAPI.analyzeJobMatching({
-            resumeId: this.selectedResume,
-            jobDescription: this.jobInfo.description,
-            jobTitle: this.jobInfo.title
+          
+          // 验证选中的简历数据
+          if (!this.selectedResumeData) {
+            throw new Error('未找到选中的简历数据，请重新选择简历')
+          }
+          
+          // 检查简历数据完整性
+          const hasBasicInfo = this.selectedResumeData.personalInfo?.name ||
+                              (this.selectedResumeData.skills && this.selectedResumeData.skills.length > 0) ||
+                              (this.selectedResumeData.workExperience && this.selectedResumeData.workExperience.length > 0) ||
+                              (this.selectedResumeData.experience && this.selectedResumeData.experience.length > 0)
+          
+          if (!hasBasicInfo) {
+            console.warn('⚠️ 选中的简历数据不完整:', this.selectedResumeData)
+            throw new Error('选中的简历信息不完整，无法进行有效的AI分析。请完善简历内容后再试。')
+          }
+          
+          console.log('📊 准备分析的简历数据:', {
+            id: this.selectedResumeData.id,
+            title: this.selectedResumeData.title,
+            hasPersonalInfo: !!this.selectedResumeData.personalInfo?.name,
+            skillsCount: (this.selectedResumeData.skills || []).length,
+            experienceCount: (this.selectedResumeData.workExperience || this.selectedResumeData.experience || []).length,
+            educationCount: (this.selectedResumeData.education || []).length
           })
+          
+          try {
+            const { aiAPI } = await import('@/services/api')
+            result = await aiAPI.analyzeJobMatching({
+              resumeId: parseInt(this.selectedResume),
+              jobDescription: this.jobInfo.description,
+              jobTitle: this.jobInfo.title
+            })
+            
+            console.log('✅ AI分析完成:', result)
+        console.log('📊 AI返回的数据结构:', {
+          hasData: !!result.data,
+          dataKeys: result.data ? Object.keys(result.data) : [],
+          matchingScore: result.data?.matchingScore,
+          reasonsCount: result.data?.reasons?.length || 0,
+          suggestionsCount: result.data?.suggestions?.length || 0,
+          strengthsCount: result.data?.strengths?.length || 0,
+          gapsCount: result.data?.gaps?.length || 0,
+          focusAreasCount: result.data?.focusAreas?.length || 0
+        })
+            
+          } catch (apiError) {
+            console.error('❌ AI分析API调用失败:', apiError)
+            
+            // 提供更详细的错误信息
+            if (apiError.message.includes('timeout') || apiError.message.includes('超时')) {
+              throw new Error('AI分析超时，请稍后重试。如果问题持续，请联系技术支持。')
+            } else if (apiError.message.includes('503') || apiError.message.includes('不可用')) {
+              throw new Error('AI服务暂时不可用，请稍后重试。')
+            } else if (apiError.message.includes('404') || apiError.message.includes('不存在')) {
+              throw new Error('简历数据不存在，请重新选择简历。')
+            } else {
+              throw new Error('AI分析失败：' + apiError.message)
+            }
+          }
+          
           resumeData = this.selectedResumeData
         } else if (this.evaluationMode === 'upload') {
           // 分析上传的文件
@@ -703,6 +942,21 @@ export default {
           if (!this.parsedContent) {
             console.log('⏳ 文件尚未解析，先进行解析...')
             await this.parseUploadedFile(this.uploadedFile)
+          }
+          
+          // 检查解析是否成功
+          if (this.parsedContent?.parseMethod === 'error') {
+            throw new Error('文件解析失败，无法进行AI分析。请检查文件格式是否正确，或尝试上传其他文件。')
+          }
+          
+          // 检查解析内容是否足够进行分析
+          const hasBasicInfo = this.parsedContent?.rawText || 
+                              this.parsedContent?.personalInfo?.name ||
+                              (this.parsedContent?.skills && this.parsedContent.skills.length > 0) ||
+                              (this.parsedContent?.experience && this.parsedContent.experience.length > 0)
+          
+          if (!hasBasicInfo) {
+            throw new Error('文件内容解析不完整，无法进行有效的AI分析。请确保文件包含完整的简历信息。')
           }
           
           // 创建临时简历对象用于分析
@@ -717,13 +971,22 @@ export default {
             rawText: this.parsedContent?.rawText || ''
           }
           
-          // 通过API调用进行分析（模拟后端处理）
-          // 由于是上传文件模式，我们需要创建一个临时的分析请求
-          // 这里我们直接构造分析结果，实际项目中应该通过专门的API
-          result = {
-            success: true,
-            data: await this.analyzeUploadedResume(tempResume, this.jobInfo.description, this.jobInfo.title)
-          }
+          console.log('📊 准备分析的简历数据:', {
+            title: tempResume.title,
+            hasPersonalInfo: Object.keys(tempResume.personalInfo).length > 0,
+            skillsCount: tempResume.skills.length,
+            experienceCount: tempResume.experience.length,
+            educationCount: tempResume.education.length,
+            hasRawText: !!tempResume.rawText
+          })
+          
+          // 调用专门的上传文件AI分析API
+          const { aiAPI } = await import('@/services/api')
+          result = await aiAPI.analyzeJobMatchingUpload({
+            resumeData: tempResume,
+            jobDescription: this.jobInfo.description,
+            jobTitle: this.jobInfo.title
+          })
           
           resumeData = {
             title: tempResume.title,
@@ -740,17 +1003,64 @@ export default {
         
         // 保存分析数据到localStorage，供结果页面使用
         const analysisData = {
+          // 首先展开AI返回的所有数据
+          ...result.data,
+          // 然后添加页面特定的数据（这些会覆盖同名字段）
           jobInfo: this.jobInfo,
           resumeData: resumeData,
           analysisMode: this.evaluationMode,
           sourceInfo: this.evaluationMode === 'select' 
             ? { type: 'database', resumeId: this.selectedResume }
             : { type: 'upload', fileName: this.uploadedFile.name, fileSize: this.uploadedFile.size },
-          ...result.data,
           timestamp: new Date().toISOString()
         }
         
+        console.log('💾 准备保存到localStorage的数据:', {
+          hasReasons: !!analysisData.reasons,
+          reasonsCount: analysisData.reasons?.length || 0,
+          hasSuggestions: !!analysisData.suggestions,
+          suggestionsCount: analysisData.suggestions?.length || 0,
+          hasStrengths: !!analysisData.strengths,
+          strengthsCount: analysisData.strengths?.length || 0,
+          hasGaps: !!analysisData.gaps,
+          gapsCount: analysisData.gaps?.length || 0,
+          hasFocusAreas: !!analysisData.focusAreas,
+          focusAreasCount: analysisData.focusAreas?.length || 0,
+          dataKeys: Object.keys(analysisData)
+        })
+        
+        // 检查关键数据是否存在
+        if (!analysisData.reasons || analysisData.reasons.length === 0) {
+          console.warn('⚠️ 警告：reasons数据缺失或为空')
+        } else {
+          console.log('✅ reasons数据正常:', analysisData.reasons.map(r => r.title))
+        }
+        
+        if (!analysisData.suggestions || analysisData.suggestions.length === 0) {
+          console.warn('⚠️ 警告：suggestions数据缺失或为空')
+        } else {
+          console.log('✅ suggestions数据正常:', analysisData.suggestions.map(s => s.title))
+        }
+        
         localStorage.setItem('matchingAnalysisData', JSON.stringify(analysisData))
+        
+        console.log('✅ 数据已保存到localStorage')
+        
+        // 立即验证保存的数据
+        const savedData = localStorage.getItem('matchingAnalysisData')
+        if (savedData) {
+          try {
+            const parsed = JSON.parse(savedData)
+            console.log('🔍 验证保存的数据:', {
+              reasonsCount: parsed.reasons?.length || 0,
+              suggestionsCount: parsed.suggestions?.length || 0,
+              strengthsCount: parsed.strengths?.length || 0,
+              gapsCount: parsed.gaps?.length || 0
+            })
+          } catch (e) {
+            console.error('❌ 保存的数据格式错误:', e)
+          }
+        }
         
         // 保存当前简历ID，用于保存结果功能
         if (this.evaluationMode === 'select' && this.selectedResume) {

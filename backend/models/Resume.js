@@ -67,6 +67,21 @@ const Resume = sequelize.define('Resume', {
     allowNull: true,
     defaultValue: null
   },
+  jobMatching: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: null
+  },
+  sourceInfo: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: null
+  },
+  type: {
+    type: DataTypes.ENUM('normal', 'evaluation_result', 'matching_result'),
+    allowNull: false,
+    defaultValue: 'normal'
+  },
   status: {
     type: DataTypes.ENUM('draft', 'published', 'archived'),
     allowNull: false,
@@ -98,6 +113,7 @@ Resume.associate = function(models) {
 };
 
 module.exports = Resume;
+
 
 
 

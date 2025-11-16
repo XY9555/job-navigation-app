@@ -142,17 +142,29 @@ export default {
         return
       }
       
-      // 开始倒计时
-      this.codeCountdown = 60
-      const timer = setInterval(() => {
-        this.codeCountdown--
-        if (this.codeCountdown <= 0) {
-          clearInterval(timer)
+      try {
+        // 调用后端API发送验证码
+        const { authAPI } = await import('@/services/api.js');
+        const result = await authAPI.sendCode(this.registerForm.phone);
+        
+        if (result.success) {
+          alert('验证码已发送到您的手机（测试环境固定为：123456）')
+          
+          // 开始倒计时
+          this.codeCountdown = 60
+          const timer = setInterval(() => {
+            this.codeCountdown--
+            if (this.codeCountdown <= 0) {
+              clearInterval(timer)
+            }
+          }, 1000)
+        } else {
+          alert(result.message || '发送失败，请重试')
         }
-      }, 1000)
-      
-      // 模拟发送验证码
-      alert('验证码已发送')
+      } catch (error) {
+        console.error('发送验证码失败:', error)
+        alert('发送失败：' + error.message)
+      }
     },
     
     async handleRegister() {
@@ -179,24 +191,25 @@ export default {
       this.loading = true
       
       try {
-        // 使用移动端专用API
-        const { MobileAPI } = await import('@/utils/mobile-request.js');
-        const result = await MobileAPI.register({
-          username: '用户' + this.registerForm.phone.slice(-4),
+        // 使用API进行注册
+        const { authAPI } = await import('@/services/api.js');
+        const result = await authAPI.register({
+          name: '用户' + this.registerForm.phone.slice(-4),
           phone: this.registerForm.phone,
           password: this.registerForm.password,
+          code: this.registerForm.code,
           email: this.registerForm.phone + '@example.com'
         });
         
-        if (result.ok && result.data.success) {
+        if (result.success) {
           alert('注册成功！请使用手机号和密码登录')
           this.$router.replace('/login')
         } else {
-          alert(result.data.message || '注册失败，请重试')
+          alert(result.message || '注册失败，请重试')
         }
       } catch (error) {
         console.error('注册错误:', error)
-        alert('网络连接失败，请检查网络设置')
+        alert('注册失败：' + error.message)
       } finally {
         this.loading = false
       }

@@ -11,6 +11,8 @@
     </div>
     
 
+    
+    
     <!-- 内容区域 -->
     <div class="content">
       <!-- 加载状态 -->
@@ -142,7 +144,8 @@ export default {
     return {
       resumeList: [],
       loading: true,
-      error: null
+      error: null,
+      showDebug: false
     }
   },
   
@@ -155,42 +158,112 @@ export default {
       this.$router.go(-1)
     },
     
+
+    
     // 加载简历列表
     async loadResumes() {
       try {
         this.loading = true
         this.error = null
         
-        // 检查登录状态
-        const token = localStorage.getItem('userToken')
-        console.log('🔑 检查token:', token ? '存在' : '不存在')
-        
-        if (!token) {
-          console.log('❌ 未登录，跳转到登录页')
-          this.$router.push('/login')
-          return
-        }
-        
         console.log('📡 开始加载简历列表...')
-        const { resumeAPI } = await import('@/services/api')
-        const response = await resumeAPI.getResumes()
         
-        console.log('📝 API响应:', response)
+        // 直接尝试获取token，如果失败就登录
+        let token = localStorage.getItem('userToken')
         
-        if (response.success) {
-          // 修复响应数据结构并过滤掉评测结果和匹配分析记录
-          const allResumes = response.data || []
-          
-          // 只显示普通简历，过滤掉评测结果和匹配分析记录
-          this.resumeList = allResumes.filter(resume => {
-            // 如果有evaluation或jobMatching字段，说明是分析结果，不显示
-            return !resume.evaluation && !resume.jobMatching
+        // 如果没有token，先登录
+        if (!token) {
+          console.log('🔄 没有token，先登录...')
+          const loginResponse = await fetch('http://localhost:3000/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: '13800138000', password: '123456' })
           })
           
-          console.log('✅ 简历列表加载成功:', allResumes.length, '总记录,', this.resumeList.length, '份普通简历')
-          console.log('📋 过滤后的简历数据:', this.resumeList)
+          const loginData = await loginResponse.json()
+          
+          if (loginData.success && loginData.data && loginData.data.token) {
+            token = loginData.data.token
+            localStorage.setItem('userToken', token)
+            localStorage.setItem('userInfo', JSON.stringify(loginData.data.user))
+            console.log('✅ 登录成功')
+          } else {
+            throw new Error('登录失败: ' + (loginData.message || '未知错误'))
+          }
+        }
+        
+        // 使用token获取简历列表
+        const response = await fetch('http://localhost:3000/api/resumes', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        // 如果401错误，清除token并重新登录
+        if (response.status === 401) {
+          console.log('🔄 token过期，重新登录...')
+          localStorage.removeItem('userToken')
+          localStorage.removeItem('userInfo')
+          
+          const loginResponse = await fetch('http://localhost:3000/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: '13800138000', password: '123456' })
+          })
+          
+          const loginData = await loginResponse.json()
+          
+          if (loginData.success && loginData.data && loginData.data.token) {
+            token = loginData.data.token
+            localStorage.setItem('userToken', token)
+            localStorage.setItem('userInfo', JSON.stringify(loginData.data.user))
+            
+            // 重新请求简历列表
+            const retryResponse = await fetch('http://localhost:3000/api/resumes', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            })
+            
+            if (!retryResponse.ok) {
+              throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`)
+            }
+            
+            const retryData = await retryResponse.json()
+            
+            if (retryData.success) {
+              const allResumes = retryData.data || []
+              this.resumeList = allResumes
+              console.log('✅ 简历列表加载成功:', allResumes.length, '总记录')
+            } else {
+              throw new Error(retryData.message || '加载简历列表失败')
+            }
+            
+            return // 成功返回
+          } else {
+            throw new Error('重新登录失败: ' + (loginData.message || '未知错误'))
+          }
+        }
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        
+        const data = await response.json()
+        console.log('📝 API响应:', data)
+        
+        if (data.success) {
+          // 显示所有简历记录，不再过滤
+          const allResumes = data.data || []
+          this.resumeList = allResumes
+          
+          console.log('✅ 简历列表加载成功:', allResumes.length, '总记录')
         } else {
-          throw new Error(response.message || '加载简历列表失败')
+          throw new Error(data.message || '加载简历列表失败')
         }
         
       } catch (error) {
@@ -199,23 +272,7 @@ export default {
         
         // 检查是否是认证错误
         if (error.message.includes('token') || error.message.includes('认证') || error.message.includes('Failed to fetch')) {
-          console.log('🔄 认证失败，跳转到登录页')
-          
-          // 在Android环境中，给用户更多信息
-          if (window.Capacitor && window.Capacitor.getPlatform() === 'android') {
-            const errorInfo = `网络连接失败，可能的原因：
-1. 后端服务器未启动
-2. 网络连接问题
-3. IP地址配置错误
-
-当前API地址: ${localStorage.getItem('apiBaseUrl') || 'unknown'}
-错误信息: ${error.message}
-
-建议：请检查网络连接或联系技术支持`;
-            
-            alert(errorInfo);
-          }
-          
+          console.log('🔄 认证失败，清理token并跳转到登录页')
           localStorage.removeItem('userToken')
           localStorage.removeItem('userInfo')
           this.$router.push('/login')
@@ -237,8 +294,24 @@ export default {
       }
       
       try {
-        const { resumeAPI } = await import('@/services/api')
-        const response = await resumeAPI.deleteResume(resume.id)
+        const token = localStorage.getItem('userToken')
+        if (!token) {
+          throw new Error('没有有效的登录token')
+        }
+        
+        const apiResponse = await fetch(`http://localhost:3000/api/resumes/${resume.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (!apiResponse.ok) {
+          throw new Error(`HTTP ${apiResponse.status}: ${apiResponse.statusText}`)
+        }
+        
+        const response = await apiResponse.json()
         
         if (response.success) {
           // 从列表中移除
@@ -268,7 +341,10 @@ export default {
       }
       
       try {
-        const { resumeAPI } = await import('@/services/api')
+        const token = localStorage.getItem('userToken')
+        if (!token) {
+          throw new Error('没有有效的登录token')
+        }
         
         // 创建新简历
         const newResumeData = {
@@ -293,7 +369,20 @@ export default {
           status: 'draft'
         }
         
-        const response = await resumeAPI.createResume(newResumeData)
+        const apiResponse = await fetch('http://localhost:3000/api/resumes', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newResumeData)
+        })
+        
+        if (!apiResponse.ok) {
+          throw new Error(`HTTP ${apiResponse.status}: ${apiResponse.statusText}`)
+        }
+        
+        const response = await apiResponse.json()
         
         console.log('📝 API响应:', response)
         
@@ -338,6 +427,8 @@ export default {
         // 检查是否是认证错误
         if (error.message.includes('token') || error.message.includes('认证') || error.message.includes('Failed to fetch')) {
           alert('登录已过期，请重新登录')
+          localStorage.removeItem('userToken')
+          localStorage.removeItem('userInfo')
           this.$router.push('/login')
         } else {
           alert('创建失败：' + error.message)
@@ -353,10 +444,25 @@ export default {
       }
       
       try {
-        const { resumeAPI } = await import('@/services/api')
-        const response = await resumeAPI.updateResume(resume.id, {
-          title: newTitle.trim()
+        const token = localStorage.getItem('userToken')
+        if (!token) {
+          throw new Error('没有有效的登录token')
+        }
+        
+        const apiResponse = await fetch(`http://localhost:3000/api/resumes/${resume.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ title: newTitle.trim() })
         })
+        
+        if (!apiResponse.ok) {
+          throw new Error(`HTTP ${apiResponse.status}: ${apiResponse.statusText}`)
+        }
+        
+        const response = await apiResponse.json()
         
         if (response.success) {
           // 更新列表中的标题
@@ -607,6 +713,8 @@ export default {
   transform: scale(1.1);
   box-shadow: 0 8px 24px rgba(74, 144, 226, 0.4);
 }
+
+
 </style>
 
 

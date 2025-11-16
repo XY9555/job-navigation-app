@@ -1,10 +1,12 @@
-// API服务层 - 统一管理所有API调用
+// API服务层
 import { API_CONFIG } from '@/config/api-config.js';
 
 class ApiService {
   constructor() {
     this.baseURL = API_CONFIG.BASE_URL;
     this.timeout = API_CONFIG.TIMEOUT;
+    this.retryAttempts = 3;
+    this.retryDelay = 2000; // 2秒重试延迟
   }
 
   // 获取认证头
@@ -23,11 +25,7 @@ class ApiService {
 
   // 通用请求方法
   async request(endpoint, options = {}) {
-    // 在Capacitor环境中强制使用XMLHttpRequest
-    if (window.Capacitor) {
-      return this.requestWithXHR(endpoint, options);
-    }
-    
+    // Web浏览器环境使用标准fetch API
     return this.requestStandard(endpoint, options);
   }
   
@@ -46,8 +44,7 @@ class ApiService {
       url,
       method: config.method || 'GET',
       headers: config.headers,
-      isCapacitor: !!window.Capacitor,
-      platform: window.Capacitor?.getPlatform?.() || 'web'
+      platform: 'web'
     });
 
     try {
@@ -100,7 +97,7 @@ class ApiService {
         error: error.message,
         name: error.name,
         stack: error.stack,
-        isCapacitor: !!window.Capacitor,
+        platform: 'web',
         networkState: navigator.onLine ? '在线' : '离线'
       });
       
@@ -121,74 +118,15 @@ class ApiService {
       if (error.message.includes('token') || error.message.includes('认证') || error.message.includes('401')) {
         localStorage.removeItem('userToken');
         localStorage.removeItem('userInfo');
-        // 在Capacitor环境中不要直接跳转
-        if (!window.Capacitor) {
-          window.location.href = '/login';
-        }
+        // 跳转到登录页
+        window.location.href = '/login';
       }
       
       throw error;
     }
   }
   
-  // 专用XMLHttpRequest方法（用于Capacitor）
-  async requestWithXHR(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    
-    console.log('🔄 使用XMLHttpRequest请求:', url);
-    
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      
-      xhr.open(options.method || 'GET', url, true);
-      
-      // 设置请求头
-      const headers = this.getAuthHeaders();
-      Object.entries(headers).forEach(([key, value]) => {
-        xhr.setRequestHeader(key, value);
-      });
-      
-      xhr.timeout = 15000; // 15秒超时
-      
-      xhr.onload = function() {
-        console.log('📡 XHR响应:', {
-          status: xhr.status,
-          statusText: xhr.statusText,
-          response: xhr.responseText.substring(0, 200)
-        });
-        
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const data = JSON.parse(xhr.responseText);
-            console.log('✅ XHR请求成功:', data);
-            resolve(data);
-          } catch (parseError) {
-            console.error('JSON解析失败:', parseError);
-            reject(new Error('服务器响应格式错误'));
-          }
-        } else {
-          reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
-        }
-      };
-      
-      xhr.onerror = function() {
-        console.error('❌ XHR网络错误');
-        reject(new Error('网络连接失败'));
-      };
-      
-      xhr.ontimeout = function() {
-        console.error('⏰ XHR请求超时');
-        reject(new Error('请求超时'));
-      };
-      
-      // 发送请求
-      if (options.body) {
-        xhr.send(JSON.stringify(options.body));
-      } else {
-        xhr.send();
-      }
-    });
-  }
+
 
   // GET请求
   async get(endpoint) {
@@ -301,6 +239,9 @@ export const authAPI = {
   // 用户登录
   login: (credentials) => api.post('/auth/login', credentials),
   
+  // 发送验证码
+  sendCode: (phone) => api.post('/auth/send-code', { phone }),
+  
   // 刷新token
   refreshToken: (token) => api.post('/auth/refresh', { token }),
   
@@ -391,6 +332,9 @@ export const aiAPI = {
   
   // 职位匹配分析
   analyzeJobMatching: (data) => api.post('/ai/job-matching', data),
+  
+  // 职位匹配分析（上传文件模式）
+  analyzeJobMatchingUpload: (data) => api.post('/ai/job-matching-upload', data),
   
   // 生成面试问题
   generateInterviewQuestions: (data) => api.post('/ai/interview-questions', data),

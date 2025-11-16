@@ -7,7 +7,7 @@ const path = require('path');
 require('dotenv').config();
 
 // 数据库配置 - 统一使用本地配置（SQLite）
-const { testConnection, syncDatabase } = require('./config/database');
+const { testConnection, syncDatabase, sequelize } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,20 +30,16 @@ app.use(cors({
     
     // 允许的源列表
     const allowedOrigins = [
-      'http://localhost:8080', 
-      'http://localhost:3000',
-      'http://10.0.2.2:3000',  // Android模拟器
-      'http://192.168.112.212:3000',  // 你的电脑IP
-      'http://192.168.112.212:8080',  // 前端开发服务器
-      'capacitor://localhost',  // Capacitor应用
-      'ionic://localhost',      // Ionic应用
-      'file://',               // 本地文件协议
-      'https://localhost',     // HTTPS本地
-      'http://localhost'       // HTTP本地
+      'http://localhost:8080',         // 前端开发服务器
+      'http://localhost:3000',         // 本地测试
+      'http://127.0.0.1:8080',        // 本地回环地址
+      'http://127.0.0.1:3000',        // 本地回环地址
+      'https://localhost',            // HTTPS本地
+      'http://localhost'              // HTTP本地
     ];
     
     // 检查是否在允许列表中
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('capacitor://') || origin.startsWith('ionic://')) {
+    if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
     }
     
@@ -53,26 +49,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // 检查局域网IP模式
-    if (/^http:\/\/192\.168\.\d+\.\d+:(3000|8080)$/.test(origin)) {
-      return callback(null, true);
-    }
-    
-    // 检查是否是Capacitor应用（通常没有origin或特殊格式）
-    if (origin.startsWith('capacitor://') || origin.startsWith('ionic://')) {
-      return callback(null, true);
-    }
-    
-    // 允许所有移动端请求（临时调试）
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // 解析JSON
@@ -109,81 +85,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 创建测试用户端点（仅用于调试）
-app.post('/api/create-test-user', async (req, res) => {
-  try {
-    const bcrypt = require('bcryptjs');
-    const User = require('./models/User');
-    
-    // 检查用户是否已存在
-    const existingUser = await User.findOne({ 
-      where: { phone: '13800138000' } 
-    });
 
-    if (existingUser) {
-      // 更新密码
-      const hashedPassword = await bcrypt.hash('123456', 10);
-      await existingUser.update({ 
-        password: hashedPassword,
-        username: '测试用户'
-      });
-      
-      return res.json({
-        success: true,
-        message: '测试用户已更新',
-        user: {
-          id: existingUser.id,
-          username: '测试用户',
-          phone: '13800138000',
-          email: existingUser.email
-        },
-        loginInfo: {
-          phone: '13800138000',
-          password: '123456'
-        }
-      });
-    }
-
-    // 创建新用户
-    const hashedPassword = await bcrypt.hash('123456', 10);
-    
-    const testUser = await User.create({
-      username: '测试用户',
-      phone: '13800138000',
-      password: hashedPassword,
-      email: 'test@example.com',
-      avatar: null,
-      settings: JSON.stringify({
-        notifications: true,
-        theme: 'light',
-        language: 'zh-CN'
-      })
-    });
-
-    res.json({
-      success: true,
-      message: '测试用户创建成功',
-      user: {
-        id: testUser.id,
-        username: testUser.username,
-        phone: testUser.phone,
-        email: testUser.email
-      },
-      loginInfo: {
-        phone: '13800138000',
-        password: '123456'
-      }
-    });
-    
-  } catch (error) {
-    console.error('创建测试用户失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '创建测试用户失败',
-      error: error.message
-    });
-  }
-});
 
 // 初始化数据库
 async function initializeDatabase() {
@@ -213,17 +115,6 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/resumes', require('./routes/resumes'));
 app.use('/api/ai', require('./routes/ai'));
-
-// 健康检查
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true,
-    status: 'OK', 
-    database: 'SQLite',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
 
 // 404处理
 app.use((req, res) => {
